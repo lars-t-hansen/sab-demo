@@ -46,7 +46,6 @@ function MasterBarrier(ID, numWorkers, iab, loc, callback) {
 
     iab[this.counterLoc] = numWorkers;
     iab[this.seqLoc] = 0;
-    console.log("Registering " + ID + " " + callback);
     MasterBarrier._callbacks[ID] = callback;
 }
 MasterBarrier._callbacks = {};
@@ -62,11 +61,8 @@ MasterBarrier.NUMLOCS = 2;
 MasterBarrier.dispatch =
     function (id) {
 	const cb = MasterBarrier._callbacks[id];
-	if (!cb) {
-	    for ( var i in MasterBarrier._callbacks)
-		console.log(i);
+	if (!cb)
 	    throw new Error("Unknown barrier ID: " + id);
-	}
 	return cb();
     };
 
