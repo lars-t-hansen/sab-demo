@@ -54,5 +54,5 @@ function showResult() {
     id.data.set(tmp);
     cx.putImageData( id, 0, 0 );
 
-    console.log("Compute time: " + (timeAfter - timeBefore) + "ms");
+    console.log("Number of workers: " + numWorkers + "  Compute time: " + (timeAfter - timeBefore) + "ms");
 }
