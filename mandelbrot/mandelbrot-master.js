@@ -15,9 +15,10 @@ const barrierID = 1337;
 // Split worker creation and initialization from computation to get a
 // realistic picture of the parallel speedup.  In Firefox, we must
 // return to the event loop before worker creation is completed, hence
-// the setTimeout below.
+// the workers enter a barrier before and after the computation to
+// start off at the same time in an initialized state.
 
-const barrier = new MasterBarrier(barrierID, numWorkers, mem, barrierLoc, () => barrierQuiescent());
+const barrier = new MasterBarrier(barrierID, numWorkers, mem, barrierLoc, barrierQuiescent);
 const workers = [];
 const sliceHeight = height/numWorkers;
 
@@ -35,18 +36,13 @@ for ( var i=0 ; i < numWorkers ; i++ ) {
 }
 
 var timeBefore;
-var barrierQuiescent =
-    (function () {
-	var first = true;
-	return function () {
-	    if (first)
-		timeBefore = new Date();
-	    else
-		showResult();
-	    first = false;
-	    barrier.release();
-	};
-    })();
+function barrierQuiescent() {
+    if (!timeBefore)
+	timeBefore = new Date();
+    else
+	showResult();
+    barrier.release();
+}
 
 function showResult() {
     const timeAfter = new Date();
