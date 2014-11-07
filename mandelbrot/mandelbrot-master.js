@@ -1,49 +1,52 @@
-// mandelbrot-parameters.js must have been loaded before this.
+// Preconditions:
+//   load ../util/barrier.js
+//   load mandelbrot-parameters.js
 
-const numWorkers = 3;
+const numWorkers = 4;
 
-// The memory contains the height*width grid and one extra shared
-// variable that is used to coordinate the workers.  Its initial value
-// is the number of workers.  When a worker is done it decrements the
-// variable; the worker to decrement it to zero signals the master
-// that the work is complete.
+// The memory contains the height*width grid and extra shared space
+// for the barrier that is used to coordinate workers.
 
-// FIXME: uncomment when we have a new build
-const mem = new SharedInt32Array(0x200000 /*height*width + 1*/);
+const mem = new SharedInt32Array(height*width + MasterBarrier.NUMLOCS);
 const sab = mem.buffer;
-const coord = height*width;
-mem[coord] = numWorkers;
+const barrierLoc = height*width;
+const barrierID = 1337;
 
 // Split worker creation and initialization from computation to get a
 // realistic picture of the parallel speedup.  In Firefox, we must
 // return to the event loop before worker creation is completed, hence
 // the setTimeout below.
 
+const barrier = new MasterBarrier(barrierID, numWorkers, mem, barrierLoc, () => barrierQuiescent());
 const workers = [];
+const sliceHeight = height/numWorkers;
+
 for ( var i=0 ; i < numWorkers ; i++ ) {
     var w = new Worker("mandelbrot-worker.js"); 
     w.onmessage =
 	function (ev) {
-	    if (ev.data == "done")
-		showResult();
+	    if (ev.data instanceof Array && ev.data[0] == "barrier")
+		MasterBarrier.dispatch(ev.data[1]);
 	    else
 		console.log(ev.data);
 	}
-    w.postMessage(["start", sab], [sab]);
+    w.postMessage(["setup", sab, barrierID, barrierLoc, i*sliceHeight, (i == numWorkers-1 ? height : (i+1)*sliceHeight)], [sab]);
     workers.push(w);
-    setTimeout(compute, 0);
 }
 
 var timeBefore;
-function compute() {
-    timeBefore = new Date();
-
-    const sliceHeight = height/numWorkers;
-    for ( var i=0 ; i < numWorkers ; i++ ) {
-	var w = workers[i];
-	w.postMessage(["compute", i*sliceHeight, (i == numWorkers-1 ? height : (i+1)*sliceHeight), coord])
-    }
-}
+var barrierQuiescent =
+    (function () {
+	var first = true;
+	return function () {
+	    if (first)
+		timeBefore = new Date();
+	    else
+		showResult();
+	    first = false;
+	    barrier.release();
+	};
+    })();
 
 function showResult() {
     const timeAfter = new Date();

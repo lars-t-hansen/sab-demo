@@ -1,36 +1,29 @@
 // FIXME: a sexier color scheme would be OK.
 
+importScripts("../util/barrier.js");
 importScripts("mandelbrot-parameters.js");
 
 // Set this to larger values to zoom in on the center.
-const magnification = 1;
+const magnification = 10;
 
 var mem;
+var barrier;
 
 onmessage =
     function (ev) {
-	switch (ev.data[0]) {
-	case "start":
-	    mem = new SharedInt32Array(ev.data[1]);
-	    break;
-	case "compute":
-	    var [_, ybase, ylimit, coord] = ev.data;
-	    mandelbrot(mem, ybase, ylimit, 10);
-	    if (Atomics.sub(mem, coord, magnification) == 1)
-		postMessage("done");
-	    break;
-	default:
-	    postMessage("Bad tag: " + ev.data[0]);
-	    break;
-	}
+	var [_, sab, barrierID, barrierLoc, ybase, ylimit] = ev.data;
+	mem = new SharedInt32Array(sab);
+	barrier = new WorkerBarrier(barrierID, mem, barrierLoc);
+	barrier.enter();	// Wait for the goahead
+	mandelbrot(ybase, ylimit, magnification);
+	barrier.enter();	// Signal completion
     };
 
 // Maximum iterations per pixel.
 const MAXIT = 1000;
 
 // Compute a strip of pixels from ybase <= y < ylimit.
-// mem is a SharedInt32Array representing a height*width grid.
-function mandelbrot(mem, ybase, ylimit, magnification) {
+function mandelbrot(ybase, ylimit, magnification) {
     const g_top = g_center_y + 1/magnification;
     const g_bottom = g_center_y - 1/magnification;
     const g_left = g_center_x - width/height*1/magnification;
