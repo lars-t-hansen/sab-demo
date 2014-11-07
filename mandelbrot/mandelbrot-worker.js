@@ -1,10 +1,8 @@
-// FIXME: a sexier color scheme would be OK.
-
 importScripts("../util/barrier.js");
 importScripts("mandelbrot-parameters.js");
 
 // Set this to larger values to zoom in on the center.
-const magnification = 10;
+const magnification = 100;
 
 var mem;
 var barrier;
@@ -19,8 +17,15 @@ onmessage =
 	barrier.enter();	// Signal completion
     };
 
-// Maximum iterations per pixel.
+// Maximum iterations per pixel.  It's possible this should be scaled by
+// magnification.
 const MAXIT = 1000;
+
+// Colors from http://en.wikipedia.org/wiki/List_of_colors:_A%E2%80%93F,
+// reversed for little-endian RGBA, with A=255.  Not pleasing to the eye.
+// But vivid!
+const colors = [0xFFFF0700, 0xFF2a2aa5, 0xFFFFff00, 0xFFa19eff,
+		0xFF00eefd, 0xFF008000, 0xFFFAFEFE, 0xFF00FFBF];
 
 // Compute a strip of pixels from ybase <= y < ylimit.
 function mandelbrot(ybase, ylimit, magnification) {
@@ -41,8 +46,7 @@ function mandelbrot(ybase, ylimit, magnification) {
 		x = xtemp;
 		it++;
 	    }
-	    var g = 255 - (it > 255 ? 255 : it);       // Green is my favorite color
-	    mem[Py*width+Px] = (255 << 24) | (g << 8); // RGBA, little-endian
+	    mem[Py*width+Px] = it == MAXIT ? 0xFF000000 : colors[it & 7];
 	}
     }
 }
