@@ -1,6 +1,9 @@
 <div>
 <canvas id=mycanvas width=800 height=600></canvas>
 </div>
+<div>
+Number of cores: <input type=text id=mycores value=4></input> <input type=button value="Compute!" onclick="runit()"></input>
+</div>
 <script>
 function PRINT(x) {
     console.log(x);
@@ -10,5 +13,12 @@ function PRINT(x) {
 <script src="ray4-common.js"></script>
 <script src="ray4-master.js"></script>
 <script>
-main();
+function runit() {
+    var defaultCores = 4;
+    var cores = parseInt(document.getElementById("mycores").value);
+    if (cores < 1 || cores > 1000)
+        cores = defaultCores;
+    document.getElementById("mycores").value = cores;
+    main(cores);
+}
 </script>

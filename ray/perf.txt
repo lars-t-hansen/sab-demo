@@ -1,0 +1,59 @@
+// About load balancing and work stealing:
+//
+// Computing one strip per worker, 8-12 workers, with an object cache,
+// we get about 4.2s on an AMD quad-core, down from about 10.4s for
+// the sequential version.
+//
+// With a 100-item work item pool and 4 workers, we get about 3.8s on
+// the quad-core.  That is is not bad: 10.4/3.8=2.7.  (400-item and
+// 25-item pools do no better, though it would seem like each of these
+// have different curves on the perf meter, possibly reflecting either
+// different completion time or contention patterns.  Also, 3 or 5
+// workers do no better.)
+//
+// Without the cache, the best 4-core pool configuration completes in
+// about 7.2s, down from about 20s for the sequential version - same
+// speedup as the cached version, and quite a bit faster than the
+// "optimal" sequential version.
+//
+// On the 4x2 MBP, with 6 workers, with the object cache, we see times
+// dropping from 5.9 to 1.8 in the initial run and 1.6-1.7 in
+// subsequent runs (warmup effects in both object cache and CPU cache
+// presumably).  This is good speedup: around 3.5.
+//
+// Speedup may be limited by GC, actually, because these programs all
+// allocate vec3 elements voraciously; with n workers the allocation
+// volume per unit time grows by a factor of n, but the GC can still
+// only work at one speed.
+//
+// Speedup may also be limited by contention on the work pool, though
+// this seems unlikely: with only 100 work items in a running time of
+// 1.7s, we have 17ms between each work pool access, which is over 40
+// million clocks.
+
+// ---
+// Other/older notes:
+//
+// Suffers from poor load balancing, probably.  With many workers (16
+// on a 4-core system) we beat the sequential time by maybe as much as
+// 1s, but a work-stealing algorithm might be better.
+//
+// Importantly though, we beat the sequential time for the serialized
+// version by over 2x on the 4-core system, ie, we've reclaimed the
+// overhead of going through shared memory.
+//
+// With an object cache we drop to 4.2s from 10.4s on the quad-core,
+// ie, better than 2x.  (8-12 workers) But each worker needs a "cache"
+// that is large enough for the whole object population.
+//
+// It wouldn't be that hard to do just as well by shipping the object
+// graph and sending back - by reference - a rendered strip; display
+// would be a little slower but probably not much.
+//
+// There's a lesson here about TypedObjects: when referencing a struct
+// out of an array it can't blindly cons a reference, it must try to
+// get rid of the stub object.
+
+
+
+

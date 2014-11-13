@@ -1,13 +1,9 @@
-const numWorkers = 6;
-
 const shadows = true;		// Compute object shadows
 const reflection = true;	// Compute object reflections
 const reflection_depth = 2;
 
-const debug = false;		// Progress printout, may confuse the consumer
-
-const TRIANGLE = 0;
-const SPHERE = 1;
+const TRIANGLE = 0;		// Object tag for triangles
+const SPHERE = 1;		// Object tag for spheres
 
 function DL3(x, y, z) { return {x:x, y:y, z:z}; }
 

@@ -40,6 +40,12 @@ function read_Material(d) {
 
 function Scene() {}
 
+// Cache the objects we'll reference.  This cache is actually large
+// enough to accomodate all objects in the scene, and we'll need that
+// because the program references all objects.  A program that uses
+// bounding volumes for optimization could probably get away with a
+// smaller cache.
+
 const c1 = new Array(256);
 const c2 = new Array(256);
 for ( var i=0 ; i < 256 ; i++ ) {
@@ -234,7 +240,7 @@ onmessage =
 	bits = new SharedInt32Array(sab, BMLOC, BMNUM);
 	barrier = new WorkerBarrier(1337, new SharedInt32Array(sab, BALOC, BANUM), 0);
 	for ( var i=0 ; i < ITER ; i++ ) {
-	    barrier.enter();	// wait for the goahead
+	    barrier.enter();	// wait for the goahead / signal completion
 	    var limit = Atomics.load(ix, 1);
 	    for (;;) {
 		var item = Atomics.add(ix, 0, 1);
@@ -246,5 +252,5 @@ onmessage =
 		trace(ylo, yhi, xlo, xhi);
 	    }
 	}
-	barrier.enter();	// signal completion
+	barrier.enter();	// signal completion after the last iteration
     };

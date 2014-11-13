@@ -3,55 +3,6 @@
 //
 // lth@acm.org / lhansen@mozilla.com, winter 2012 and later.
 
-// About load balancing and work stealing:
-//
-// Computing one strip per worker, 8-12 workers, with an object cache,
-// we get about 4.2s on an AMD quad-core, down from about 10.4s for
-// the sequential version.
-//
-// With a 100-item work item pool and 4 workers, we get about 3.8s on
-// the quad-core.  That is is not bad: 10.4/3.8=2.7.  (400-item and
-// 25-item pools do no better, though it would seem like each of these
-// have different curves on the perf meter, possibly reflecting either
-// different completion time or contention patterns.  Also, 3 or 5
-// workers do no better.)
-//
-// Without the cache, the best 4-core pool configuration completes in
-// about 7.2s, down from about 20s for the sequential version - same
-// speedup as the cached version, and quite a bit faster than the
-// "optimal" sequential version.
-//
-// On the 4x2 MBP, with 6 workers, with the object cache, we see times
-// dropping from 5.9 to 1.8 in the initial run and 1.6-1.7 in
-// subsequent runs (warmup effects in both object cache and CPU cache
-// presumably).  This is good speedup: around 3.5.
-
-// ---
-// Other/older notes:
-//
-// Suffers from poor load balancing, probably.  With many workers (16
-// on a 4-core system) we beat the sequential time by maybe as much as
-// 1s, but a work-stealing algorithm might be better.
-//
-// Importantly though, we beat the sequential time for the serialized
-// version by over 2x on the 4-core system, ie, we've reclaimed the
-// overhead of going through shared memory.
-//
-// With an object cache we drop to 4.2s from 10.4s on the quad-core,
-// ie, better than 2x.  (8-12 workers) But each worker needs a "cache"
-// that is large enough for the whole object population.
-//
-// It wouldn't be that hard to do just as well by shipping the object
-// graph and sending back - by reference - a rendered strip; display
-// would be a little slower but probably not much.
-//
-// There's a lesson here about TypedObjects: when referencing a struct
-// out of an array it can't blindly cons a reference, it must try to
-// get rid of the stub object.
-
-
-
-
 // Shared memory - this holds all the arrays.
 
 const sab = new SharedArrayBuffer(SharedBytes);
@@ -110,46 +61,63 @@ function write_Triangle(material, v1, v2, v3) {
 }
 
 const bits = new SharedInt32Array(sab, BMLOC, BMNUM);
-const initial = DL3(152.0/256.0, 251.0/256.0, 152.0/256.0);
+const initial = DL3(152.0/256.0, 251.0/256.0, 152.0/256.0); // Pale green
 const initialc = (255<<24)|((255*initial.z)<<16)|((255*initial.y)<<8)|(255*initial.x)
 for ( var i=0, l=width*height ; i < l ; i++ )
     bits[i] = initialc;
 
-const barrier =
-    new MasterBarrier(1337, numWorkers, new SharedInt32Array(sab, BALOC, BANUM), 0, () => barrierTrigger());
+var numWorkers;			// Set by main
+var barrier = null;		// Set by main
 
 const ix = new SharedInt32Array(sab, IXLOC, IXNUM);
 const pool = new SharedInt32Array(sab, POLOC, PONUM);
-			  
-function main() {
-    // Initialize fm, om, om_, eye, light, background
-    setStage();
 
-    // Initialize work pool
-    // Simplification: Assume both height and width are divisible by POX and POY
-    var yslice = height/POY;
-    var xslice = width/POX;
-    for ( var y=0 ; y < POY ; y++ ) {
-	for ( var x=0 ; x < POX ; x++ ) {
-	    pool[y*POX*4+x*4+0] = yslice*y;
-	    pool[y*POX*4+x*4+1] = xslice*x;
-	    pool[y*POX*4+x*4+2] = yslice*(y+1);
-	    pool[y*POX*4+x*4+3] = xslice*(x+1);
+var setup = false;
+var workers = [];
+			  
+function main(cores) {
+    if (!setup) {
+	// Initialize fm, om, om_, eye, light, background
+	setStage();
+
+	// Initialize work pool
+	// Simplification: Assume both height and width are divisible by POX and POY
+	var yslice = height/POY;
+	var xslice = width/POX;
+	for ( var y=0 ; y < POY ; y++ ) {
+	    for ( var x=0 ; x < POX ; x++ ) {
+		pool[y*POX*4+x*4+0] = yslice*y;
+		pool[y*POX*4+x*4+1] = xslice*x;
+		pool[y*POX*4+x*4+2] = yslice*(y+1);
+		pool[y*POX*4+x*4+3] = xslice*(x+1);
+	    }
 	}
+
+	setup = true;
     }
+    
     Atomics.store(ix, 0, 0);
     Atomics.store(ix, 1, POY*POX);
+    numWorkers = cores;
+    barrier = new MasterBarrier(1337, numWorkers, new SharedInt32Array(sab, BALOC, BANUM), 0, () => barrierTrigger());
+    timeBefore = null
+    it = 0;
 
     // Create and start workers, they will enter the barrier when ready
     for ( var i=0 ; i < numWorkers ; i++ ) {
-	var w = new Worker("ray4-worker.js"); 
-	w.onmessage =
-	    function (ev) {
-		if (ev.data instanceof Array && ev.data[0] == "barrier")
-		    MasterBarrier.dispatch(ev.data[1]);
-		else
-		    console.log(ev.data);
-	    }
+	if (i < workers.length)
+	    var w = workers[i];
+	else {
+	    var w = new Worker("ray4-worker.js"); 
+	    w.onmessage =
+		function (ev) {
+		    if (ev.data instanceof Array && ev.data[0] == "barrier")
+			MasterBarrier.dispatch(ev.data[1]);
+		    else
+			console.log(ev.data);
+		}
+	    workers.push(w);
+	}
 	w.postMessage([sab, om_, eye, light, background], [sab]);
     }
 }
@@ -214,8 +182,6 @@ function setStage() {
 	rectangle(m, v6, v5, v2, v1);  // bottom
     }
 
-    if (debug)
-	PRINT("Setstage start");
     const m1 = write_Material(DL3(0.1, 0.2, 0.2), DL3(0.3, 0.6, 0.6), 10, DL3(0.05, 0.1, 0.1), 0);
     const m2 = write_Material(DL3(0.3, 0.3, 0.2), DL3(0.6, 0.6, 0.4), 10, DL3(0.1,0.1,0.05),   0);
     const m3 = write_Material(DL3(0.1,  0,  0), DL3(0.8,0,0),     10, DL3(0.1,0,0),     0);
@@ -242,6 +208,4 @@ function setStage() {
     eye        = DL3(0.5, 0.75, 5);
     light      = DL3(g_left-1, g_top, 2);
     background = DL3(25.0/256.0,25.0/256.0,112.0/256.0);
-    if (debug)
-	PRINT("Setstage end");
 }
