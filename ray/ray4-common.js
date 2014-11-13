@@ -1,4 +1,4 @@
-const numWorkers = 4;
+const numWorkers = 6;
 
 const shadows = true;		// Compute object shadows
 const reflection = true;	// Compute object reflections
@@ -61,3 +61,5 @@ const IXLOC = BALOC + BASIZ;
 const POLOC = IXLOC + IXSIZ;
 
 const SharedBytes = FMSIZ + OMSIZ + BMSIZ + BASIZ + IXSIZ + POSIZ;
+
+const ITER = 1;			// Number of iterations; later iterations are usually faster than the first

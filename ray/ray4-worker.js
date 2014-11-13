@@ -48,14 +48,14 @@ for ( var i=0 ; i < 256 ; i++ ) {
 }
 
 function read_ObjectAt(i) {
-    // if (c1[i & 255] == i)
-    // 	return c2[i & 255];
+    if (c1[i & 255] == i)
+     	return c2[i & 255];
     if (om[i] == TRIANGLE)
 	var x = read_Triangle(i);
     else
 	var x = read_Sphere(i);
-    // c1[i & 255] = i;
-    // c2[i & 255] = x;
+    c1[i & 255] = i;
+    c2[i & 255] = x;
     return x;
 }
 
@@ -233,17 +233,18 @@ onmessage =
 	background = c;
 	bits = new SharedInt32Array(sab, BMLOC, BMNUM);
 	barrier = new WorkerBarrier(1337, new SharedInt32Array(sab, BALOC, BANUM), 0);
-	barrier.enter();	// wait for the goahead
-	var limit = Atomics.load(ix, 1);
-	for (;;) {
-	    var item = Atomics.add(ix, 0, 1);
-	    if (item >= limit) break;
-	    var ylo = pool[item*4+0];
-	    var xlo = pool[item*4+1];
-	    var yhi = pool[item*4+2];
-	    var xhi = pool[item*4+3];
-	    //postMessage("Item: " + item + " " + ylo + " " + yhi + " " + xlo + " " + xhi);
-	    trace(ylo, yhi, xlo, xhi);
+	for ( var i=0 ; i < ITER ; i++ ) {
+	    barrier.enter();	// wait for the goahead
+	    var limit = Atomics.load(ix, 1);
+	    for (;;) {
+		var item = Atomics.add(ix, 0, 1);
+		if (item >= limit) break;
+		var ylo = pool[item*4+0];
+		var xlo = pool[item*4+1];
+		var yhi = pool[item*4+2];
+		var xhi = pool[item*4+3];
+		trace(ylo, yhi, xlo, xhi);
+	    }
 	}
 	barrier.enter();	// signal completion
     };

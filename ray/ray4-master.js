@@ -20,6 +20,11 @@
 // about 7.2s, down from about 20s for the sequential version - same
 // speedup as the cached version, and quite a bit faster than the
 // "optimal" sequential version.
+//
+// On the 4x2 MBP, with 6 workers, with the object cache, we see times
+// dropping from 5.9 to 1.8 in the initial run and 1.6-1.7 in
+// subsequent runs (warmup effects in both object cache and CPU cache
+// presumably).  This is good speedup: around 3.5.
 
 // ---
 // Other/older notes:
@@ -82,25 +87,9 @@ function oalloc(tag, material, data) {
     return p;
 }
 
-function DL3(x, y, z) { return {x:x, y:y, z:z}; }
-
-function add(a, b) { return DL3(a.x+b.x, a.y+b.y, a.z+b.z); }
-function sub(a, b) { return DL3(a.x-b.x, a.y-b.y, a.z-b.z); }
-function muli(a, c) { return DL3(a.x*c, a.y*c, a.z*c); }
-function divi(a, c) { return DL3(a.x/c, a.y/c, a.z/c); }
-function neg(a) { return DL3(-a.x, -a.y, -a.z); }
-function length(a) { return Math.sqrt(a.x*a.x + a.y*a.y + a.z*a.z); }
-function normalize(a) { var d = length(a); return DL3(a.x/d, a.y/d, a.z/d); }
-function cross(a, b) { return DL3(a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x); }
-function dot(a, b) { return a.x*b.x + a.y*b.y + a.z*b.z; }
-
-function Material(diffuse, specular, shininess, ambient, mirror) {
-    this.diffuse = diffuse;
-    this.specular = specular;
-    this.shininess = shininess;
-    this.ambient = ambient;
-    this.mirror = mirror;
-}
+var eye;        // Eye coordinates
+var light;      // Light source coordinates
+var background; // Background color
 
 function write_Material(diffuse, specular, shininess, ambient, mirror) {
     return falloc(diffuse.x, diffuse.y, diffuse.z,
@@ -133,7 +122,10 @@ const ix = new SharedInt32Array(sab, IXLOC, IXNUM);
 const pool = new SharedInt32Array(sab, POLOC, PONUM);
 			  
 function main() {
+    // Initialize fm, om, om_, eye, light, background
     setStage();
+
+    // Initialize work pool
     // Simplification: Assume both height and width are divisible by POX and POY
     var yslice = height/POY;
     var xslice = width/POX;
@@ -147,6 +139,8 @@ function main() {
     }
     Atomics.store(ix, 0, 0);
     Atomics.store(ix, 1, POY*POX);
+
+    // Create and start workers, they will enter the barrier when ready
     for ( var i=0 ; i < numWorkers ; i++ ) {
 	var w = new Worker("ray4-worker.js"); 
 	w.onmessage =
@@ -160,34 +154,39 @@ function main() {
     }
 }
 
+// Called when all workers are in the barrier
 var timeBefore;
+var it = 0;
 function barrierTrigger() {
-    if (!timeBefore)
-	timeBefore = new Date();
+    if (it++ < ITER) {
+	if (timeBefore)
+	    showTime();
+    }
     else
 	showResult();
+    timeBefore = new Date();
+    Atomics.store(ix, 0, 0);
     barrier.release();
 }
 
 function showResult() {
-    const timeAfter = new Date();
+    showTime();
 
     var mycanvas = document.getElementById("mycanvas");
     var cx = mycanvas.getContext('2d');
     var id  = cx.createImageData(width, height);
     id.data.set(new SharedUint8Array(sab, BMLOC, BMSIZ));
     cx.putImageData( id, 0, 0 );
+}
 
+function showTime() {
+    const timeAfter = new Date();
     console.log("Number of workers: " + numWorkers + "  Compute time: " + (timeAfter - timeBefore) + "ms");
 }
 
-const zzz = DL3(0,0,0);
-
-var eye = zzz;      // Eye coordinates
-var light = zzz;    // Light source coordinates
-var background = zzz; // Background color
-
 function setStage() {
+
+    const zzz = DL3(0,0,0);
 
     // Colors: http://kb.iu.edu/data/aetf.html
 
