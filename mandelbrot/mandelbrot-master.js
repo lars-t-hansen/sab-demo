@@ -7,7 +7,7 @@ const numWorkers = 4;
 // The memory contains the height*width grid and extra shared space
 // for the barrier that is used to coordinate workers.
 
-const mem = new SharedInt32Array(height*width + MasterBarrier.NUMLOCS);
+const mem = new SharedInt32Array(0x200000 /*height*width + MasterBarrier.NUMLOCS*/);
 const sab = mem.buffer;
 const barrierLoc = height*width;
 const barrierID = 1337;
@@ -19,7 +19,6 @@ const barrierID = 1337;
 // start off at the same time in an initialized state.
 
 const barrier = new MasterBarrier(barrierID, numWorkers, mem, barrierLoc, barrierQuiescent);
-const workers = [];
 const sliceHeight = height/numWorkers;
 
 for ( var i=0 ; i < numWorkers ; i++ ) {
@@ -32,7 +31,6 @@ for ( var i=0 ; i < numWorkers ; i++ ) {
 		console.log(ev.data);
 	}
     w.postMessage(["setup", sab, barrierID, barrierLoc, i*sliceHeight, (i == numWorkers-1 ? height : (i+1)*sliceHeight)], [sab]);
-    workers.push(w);
 }
 
 var timeBefore;
