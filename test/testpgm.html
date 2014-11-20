@@ -1,0 +1,23 @@
+<html>
+<body onload="testfunc()">
+<div>
+<canvas id="mycanvas"></canvas>
+</div>
+<script src="../util/pgm.js"></script>
+<script src="../util/canvas.js"></script>
+<script>
+var image = new PGM();
+
+function testfunc() {
+    image.loadFromURL("cat.pgm", showImage);
+}
+
+function showImage() {
+    canvasSetFromGrayscale(document.getElementById("mycanvas"),
+			   image.data,
+			   image.height,
+			   image.width);
+}
+</script>
+</body>
+</html>

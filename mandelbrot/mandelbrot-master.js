@@ -25,7 +25,7 @@ for ( var i=0 ; i < numWorkers ; i++ ) {
     var w = new Worker("mandelbrot-worker.js"); 
     w.onmessage =
 	function (ev) {
-	    if (ev.data instanceof Array && ev.data[0] == "barrier")
+	    if (ev.data instanceof Array && ev.data.length == 2 && ev.data[0] == "MasterBarrier.dispatch")
 		MasterBarrier.dispatch(ev.data[1]);
 	    else
 		console.log(ev.data);
