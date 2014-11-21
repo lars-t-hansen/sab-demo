@@ -1,16 +1,22 @@
+// 'filename' should be defined by a previously loaded script.
+
+if (!this.filename) {
+    alert("No file name defined");
+    throw new Error("Aborted");
+}
+
 var numWorkers = 4;
 var workers = [];
+var finished = 0;
 var g, h;
+var image = new PGM();
 
 initWorkers();
-
-var image = new PGM();
-var finished = 0;
-
-image.loadFromURL("cat.pgm", convolveImage, () => alert("Not found"));
+image.loadFromURL(filename,
+		  convolveImage,
+		  () => alert(filename + ": Not found"));
 
 function convolveImage() {
-    console.log("Got to convolveImage");
     var height = image.height;
     var width = image.width;
 
@@ -22,13 +28,18 @@ function convolveImage() {
 
     g.set(image.data);
 
-    // Exclude the border pixels from the convolution, for simplicity.
-    var sliceHeight = Math.floor((height-2) / numWorkers);
-    for ( var i=0 ; i < numWorkers ; i++ )
-	workers[i].postMessage(["compute",
-				width,
-				1+i*sliceHeight,
-				i==numWorkers-1 ? height-1 : 1+(i+1)*sliceHeight]);
+    var sliceHeight = Math.floor(height / numWorkers);
+    var extra = height % numWorkers;
+    var lo = 0;
+    for ( var w of workers ) {
+	var hi = lo + sliceHeight;
+	if (extra) {
+	    hi++;
+	    extra--;
+	}
+	w.postMessage(["compute", height, width, lo, hi]);
+	lo = hi;
+    }
 }
 
 function initWorkers() {

@@ -1,15 +1,11 @@
-// Preconditions:
-//   load ../util/barrier.js
-//   load mandelbrot-parameters.js
-
 const numWorkers = 4;
 
 // The memory contains the height*width grid and extra shared space
 // for the barrier that is used to coordinate workers.
 
-const mem = new SharedInt32Array(0x200000 /*height*width + MasterBarrier.NUMLOCS*/);
+const mem = new SharedInt32Array(height*width + MasterBarrier.NUMLOCS);
 const sab = mem.buffer;
-const barrierLoc = height*width;
+const barrierLoc = height*width; // Barrier memory follows grid memory
 const barrierID = 1337;
 
 // Split worker creation and initialization from computation to get a
@@ -30,27 +26,24 @@ for ( var i=0 ; i < numWorkers ; i++ ) {
 	    else
 		console.log(ev.data);
 	}
-    w.postMessage(["setup", sab, barrierID, barrierLoc, i*sliceHeight, (i == numWorkers-1 ? height : (i+1)*sliceHeight)], [sab]);
+    w.postMessage(["setup",
+		   sab,
+		   barrierID,
+		   barrierLoc,
+		   i*sliceHeight,
+		   (i == numWorkers-1 ? height : (i+1)*sliceHeight)], [sab]);
 }
 
 var timeBefore;
 function barrierQuiescent() {
     if (!timeBefore)
-	timeBefore = new Date();
-    else
-	showResult();
+	timeBefore = Date.now();
+    else {
+	console.log("Number of workers: " + numWorkers + "  Compute time: " + (Date.now() - timeBefore) + "ms");
+	canvasSetFromABGRBytes(document.getElementById("mycanvas"),
+			       new SharedUint8Array(sab, 0, height*width*4),
+			       height,
+			       width);
+    }
     barrier.release();
-}
-
-function showResult() {
-    const timeAfter = new Date();
-
-    var mycanvas = document.getElementById("mycanvas");
-    var cx = mycanvas.getContext('2d');
-    var id  = cx.createImageData(width, height);
-    var tmp = new SharedUint8Array(sab, 0, height*width*4); 
-    id.data.set(tmp);
-    cx.putImageData( id, 0, 0 );
-
-    console.log("Number of workers: " + numWorkers + "  Compute time: " + (timeAfter - timeBefore) + "ms");
 }

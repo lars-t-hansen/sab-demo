@@ -1,3 +1,5 @@
+// g will be the input image, h the output image
+
 var g, h;
 
 onmessage =
@@ -12,7 +14,7 @@ onmessage =
 	    h = new SharedUint8Array(b);
 	    break;
 	case "compute":
-	    var [_, width, lo, hi] = ev.data;
+	    var [_, height, width, lo, hi] = ev.data;
 	    var then = new Date();
 	    convolve(g, width, lo, hi, h);
 	    postMessage(["status", width, lo, hi, (new Date() - then) + "ms"]);
