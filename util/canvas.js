@@ -1,3 +1,5 @@
+// Utilities for simple manipulation of canvas elements.
+
 function canvasSetFromGrayscale(canvasElt, bytes, height, width) {
     canvasElt.height = height;
     canvasElt.width = width;
