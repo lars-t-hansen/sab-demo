@@ -1,5 +1,7 @@
-// A simple utility that maintains a worker pool and invokes
-// computations in parallel on data.
+// 22 November 2014 / lhansen@mozilla.com
+
+// A simple data-parallel framework that maintains a worker pool and
+// invokes computations in parallel on shared memory.
 //
 // Load this into your main program, then call Multicore.init() to set
 // things up.  Then call Multicore.build() to perform work.
@@ -44,7 +46,7 @@ function _Multicore_init(numWorkers, workerScript, readyCallback) {
 					   _Multicore_numWorkers,
 					   _Multicore_mem,
 					   _Multicore_barrierLoc,
-					   _Multicore_barrierQuiescent);
+					   barrierQuiescent);
     _Multicore_alloc += MasterBarrier.NUMLOCS;
     _Multicore_funcLoc = _Multicore_alloc++;
     _Multicore_sizeLoc = _Multicore_alloc++;
@@ -53,33 +55,33 @@ function _Multicore_init(numWorkers, workerScript, readyCallback) {
     _Multicore_callback = readyCallback;
     for ( var i=0 ; i < numWorkers ; i++ ) {
 	var w = new Worker(workerScript);
-	w.onmessage = _Multicore_msg;
+	w.onmessage = messageHandler;
 	w.postMessage(["start",
 		       _Multicore_mem.buffer,
 		       _Multicore_barrierLoc, _Multicore_funcLoc, _Multicore_sizeLoc, _Multicore_nextLoc, _Multicore_limLoc],
 		      [_Multicore_mem.buffer]);
 	_Multicore_workers.push(w);
     }
-}
 
-function _Multicore_barrierQuiescent() {
-    var fn;
-    if (fn = _Multicore_callback) {
-	_Multicore_callback = null;
-	fn();
+    function barrierQuiescent() {
+	var fn;
+	if (fn = _Multicore_callback) {
+	    _Multicore_callback = null;
+	    fn();
+	}
+	else
+	    throw new Error("No barrier callback installed!");
     }
-    else
-	throw new Error("No barrier callback installed!");
-}
 
-function _Multicore_msg(ev) {
-    switch (ev.data[0]) {
-    case "MasterBarrier.dispatch":
-	MasterBarrier.dispatch(ev.data[1]);
-	break;
-    default:
-	console.log(ev.data);
-	break;
+    function messageHandler(ev) {
+	switch (ev.data[0]) {
+	case "MasterBarrier.dispatch":
+	    MasterBarrier.dispatch(ev.data[1]);
+	    break;
+	default:
+	    console.log(ev.data);
+	    break;
+	}
     }
 }
 
@@ -184,3 +186,4 @@ function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace) {
 	}
     }
 }
+
