@@ -12,18 +12,13 @@ const MAXIT = 1000;
 const colors = [0xFFFF0700, 0xFF2a2aa5, 0xFFFFff00, 0xFFa19eff,
 		0xFF00eefd, 0xFF008000, 0xFFFAFEFE, 0xFF00FFBF];
 
-// Transform a transmitted SharedArrayBuffer to a SharedInt32Array.
-
-Multicore.initMemory[Func_Mandelbrot] =
-    function (sab) {
-	return new SharedInt32Array(sab);
-    };
-
 // Compute a square of pixels into mem with y in [ybase, ylimit)
 // and x in [xbase, xlimit).
 
-Multicore.performWork[Func_Mandelbrot] =
+Multicore.functions[Func_Mandelbrot] =
     function (mem, ybase, ylimit, xbase, xlimit) {
+	if (!(mem instanceof SharedInt32Array) || mem.length != height*width)
+	    throw new Error("Bad object: " + mem + " " + mem.length);
 	const g_top = g_center_y + 1/magnification;
 	const g_bottom = g_center_y - 1/magnification;
 	const g_left = g_center_x - width/height*1/magnification;
