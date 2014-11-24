@@ -1,0 +1,318 @@
+diff --git a/renderWorld/renderWorld-worker.js b/renderWorld/renderWorld-worker.js
+index caa1976..7144e12 100644
+--- a/renderWorld/renderWorld-worker.js
++++ b/renderWorld/renderWorld-worker.js
+@@ -2,8 +2,18 @@ importScripts("../util/barrier.js",
+ 	      "../util/parinvoke-worker.js");
+ 
+ Multicore.addFunction("MineKernel", MineKernel);
++Multicore.addFunction("Setup", Setup);
++
++var wself = {};
++
++function Setup(w, h, map, texmap, yCos, ySin, xCos, xSin, ox, oy, oz) {
++    Multicore.msg("Setup called: " + [w, h, map, texmap, yCos, ySin, xCos, xSin, ox, oy, oz].join(","));
++    wself = { w, h, map, texmap, yCos, ySin, xCos, xSin, ox, oy, oz };
++}
++
++function MineKernel(result, lo, hi) {
++    var { w, h, map, texmap, yCos, ySin, xCos, xSin, ox, oy, oz } = wself;
+ 
+-function MineKernel(result, lo, hi, w, h, map, texmap, yCos, ySin, xCos, xSin, ox, oy, oz) {
+     for ( var index=lo ; index < hi ; index++ ) {
+ 	var x = Math.floor(index/w);
+ 	var y = index-(x*w);
+diff --git a/renderWorld/renderWorld.js b/renderWorld/renderWorld.js
+index 7393889..a426db5 100644
+--- a/renderWorld/renderWorld.js
++++ b/renderWorld/renderWorld.js
+@@ -81,7 +81,15 @@ World.prototype.toggleExecutionMode = function () {
+         this.MODE = "workers";
+ 	if (this.resultArray == null) {
+ 	    this.resultArray = new SharedInt32Array(this.w*this.h);
+-	    Multicore.init(numWorkers, "renderWorld-worker.js", () => { READY=true });
++	    Multicore.init(numWorkers,
++			   "renderWorld-worker.js",
++			   () => {
++			       console.log("Doing a broadcast");
++			       Multicore.broadcast(() => { console.log("Broadcast returned"); READY=true },
++						   "Setup",
++						   this.w, this.h, this.map, this.texmap, this.yCos, this.ySin, this.xCos, this.xSin,
++						   this.ox, this.oy, this.oz);
++			   });
+ 	}
+         document.getElementById("togglebutton").innerHTML = "Go Sequential";
+ 	break;
+@@ -319,9 +327,7 @@ World.prototype.renderWorldWorkers = function(k) {
+ 	return false;
+     this.updateTickParams();
+     this.result = this.resultArray;
+-    Multicore.build(k, "MineKernel", this.resultArray, [[0,this.w*this.h]],
+-		    this.w, this.h, this.map, this.texmap, this.yCos, this.ySin, this.xCos, this.xSin,
+-		    this.ox, this.oy, this.oz);
++    Multicore.build(k, "MineKernel", this.resultArray, [[0,this.w*this.h]]);
+     return true;
+ }
+ 
+diff --git a/util/parinvoke-master.js b/util/parinvoke-master.js
+index c956c43..b715162 100644
+--- a/util/parinvoke-master.js
++++ b/util/parinvoke-master.js
+@@ -7,12 +7,16 @@
+ //
+ // Call Multicore.init() to set things up, once.
+ //
++// Call Multicore.broadcast() to invoke a function once on all the
++//   workers, typically to distribute parameter data.
++//
+ // Call Multicore.build() to distribute and perform computation.
+ 
+ const Multicore =
+     {
+ 	init: _Multicore_init,
+-	build: _Multicore_build
++	build: _Multicore_build,
++	broadcast: _Multicore_broadcast
+     };
+ 
+ var _Multicore_workers = [];
+@@ -94,6 +98,22 @@ function _Multicore_init(numWorkers, workerScript, readyCallback) {
+     }
+ }
+ 
++// Multicore.broadcast()
++//
++// doneCallback is a function, it will be invoked in the master once
++//   the work is finished.
++// fnIdent is the string identifier of the remote function to invoke.
++//   The worker must register an appropriate handler.
++// The ...args can be number, SharedTypedArray, or SharedArrayBuffer
++//   values and will be marshalled and passed as arguments to the user
++//   function on the worker side.
++//
++// Only one build or broadcast can be going on at any time.
++
++function _Multicore_broadcast(doneCallback, fnIdent, ...args) {
++    _Multicore_communicate("broadcast", doneCallback, fnIdent, null, null, args);
++}
++
+ // Multicore.build()
+ //
+ // doneCallback is a function, it will be invoked in the master once
+@@ -110,11 +130,13 @@ function _Multicore_init(numWorkers, workerScript, readyCallback) {
+ //   values and will be marshalled and passed as arguments to the user
+ //   function on the worker side.
+ //
+-// You can call this function repeatedly, but only one call can be
+-// outstanding: only when the doneCallback has been invoked can
+-// Multicore.build be called again.
++// Only one build or broadcast can be going on at any time.
+ 
+ function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args) {
++    _Multicore_communicate("build", doneCallback, fnIdent, outputMem, indexSpace, args);
++}
++
++function _Multicore_communicate(how, doneCallback, fnIdent, outputMem, indexSpace, args) {
+     const M = _Multicore_mem;
+ 
+     const ARG_INT = 1;
+@@ -136,54 +158,66 @@ function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args)
+     const itmp = new Int32Array(tmp);
+     const ftmp = new Float64Array(tmp);
+ 
+-    for ( var x of indexSpace )
+-	if (x.length != 2 || typeof x[0] != 'number' || typeof x[1] != 'number' || (x[0]|0) != x[0] || (x[1]|0) != x[1])
+-	    throw new Error("Bad indexSpace element " + x)
+-    var items;
+-    switch (indexSpace.length) {
+-    case 1:
+-	items = sliceSpace(indexSpace[0][0], indexSpace[0][1]);
+-	break;
+-    case 2:
+-	items = cross(sliceSpace(indexSpace[0][0], indexSpace[0][1]), sliceSpace(indexSpace[1][0], indexSpace[1][1]));
+-	break;
+-    default:
+-	throw new Error("Only 1D and 2D supported as of now");
++    const broadcast = (how == "broadcast");
++
++    var items = [];
++    var itemSize = 0;
++    if (!broadcast) {
++	if (indexSpace.length < 1)
++	    throw new Error("Bad indexSpace " + indexSpace);
++	for ( var x of indexSpace )
++	    if (x.length != 2 || typeof x[0] != 'number' || typeof x[1] != 'number' || (x[0]|0) != x[0] || (x[1]|0) != x[1])
++		throw new Error("Bad indexSpace element " + x)
++	switch (indexSpace.length) {
++	case 1:
++	    items = sliceSpace(indexSpace[0][0], indexSpace[0][1]);
++	    break;
++	case 2:
++	    items = cross(sliceSpace(indexSpace[0][0], indexSpace[0][1]), sliceSpace(indexSpace[1][0], indexSpace[1][1]));
++	    break;
++	default:
++	    throw new Error("Only 1D and 2D supported as of now");
++	}
++	itemSize = indexSpace.length * 2;
+     }
+-    const itemSize = indexSpace.length * 2;
+     var { argValues, newSAB } = processArgs(outputMem, args);
+-    if (newSAB.length) {
++    var p = _Multicore_alloc;
++    if (broadcast) {
++	_Multicore_callback = doneCallback;
++	p = installArgs(p, argValues);
++	p = installItems(p, fnIdent, itemSize, items); // Install the function
++    }
++    else if (newSAB.length) {
+ 	_Multicore_callback =
+ 	    function () {
+ 		_Multicore_callback = doneCallback;
+-		var p = _Multicore_alloc;
+ 		p = installArgs(p, argValues);
+ 		p = installItems(p, fnIdent, itemSize, items);
+-		if (p >= M.length)
+-		    throw new Error("Not enough working memory");
+ 		_Multicore_barrier.release();
+ 	    };
++    }
++    if (broadcast || newSAB.length) {
+ 	// Signal message loop exit.
+ 	// Any negative number larger than numWorkers will do.
+-	M[_Multicore_funcLoc] = -1;
++	if (!broadcast)
++	    M[_Multicore_funcLoc] = -1;
+ 	M[_Multicore_sizeLoc] = 0;
+ 	M[_Multicore_nextLoc] = -1000000;
+ 	// Transmit buffers
+ 	var xfer = [];
+ 	for ( var x of newSAB )
+ 	    xfer.push(x[0]);
+-	newSAB.unshift("transfer");
++	newSAB.unshift(broadcast ? "broadcast" : "transfer");
+ 	for ( var w of _Multicore_workers )
+ 	    w.postMessage(newSAB, xfer);
+     }
+     else {
+ 	_Multicore_callback = doneCallback;
+-	var p = _Multicore_alloc;
+ 	p = installArgs(p, argValues);
+ 	p = installItems(p, fnIdent, itemSize, items);
+-	if (p >= M.length)
+-	    throw new Error("Not enough working memory");
+     }
++    if (p >= M.length)
++	throw new Error("Not enough working memory");
+     _Multicore_barrier.release();
+ 
+     function sliceSpace(lo, lim) {
+@@ -248,7 +282,8 @@ function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args)
+ 	var newSAB = [];
+ 	var vno = 0;
+ 
+-	pushArg(outputMem, true);
++	if (outputMem)
++	    pushArg(outputMem, true);
+ 	for ( var a of args )
+ 	    pushArg(a);
+ 	return { argValues, newSAB };
+diff --git a/util/parinvoke-worker.js b/util/parinvoke-worker.js
+index 67a62d3..d103b9a 100644
+--- a/util/parinvoke-worker.js
++++ b/util/parinvoke-worker.js
+@@ -22,11 +22,16 @@ const Multicore = {};
+ //
+ // name is a string; user code will pass this string to Multicore.build()
+ //   on the master side.
+-// func is the function to invoke.  It will be called on the output object,
++// func is the function to invoke.
++//
++// For Multicore.build(), the function will be called on the output object,
+ //   an even number of index range values (pairs of lo and hi, lo <= index < hi),
+ //   and on any other arguments user code passes to Multicore.build().
+ //
+-// Returns nothing.
++// For Multicore.broadcast(), the function will be called on the arguments the
++//   user code passes to Multicore.broadcast().
++//
++// addFunction() returns nothing.
+ 
+ Multicore.addFunction =
+     function (name, func) {
+@@ -65,20 +70,24 @@ onmessage =
+ 	    _Multicore_limLoc = limLoc;
+ 	    _Multicore_nextArgLoc = nextArgLoc;
+ 	    _Multicore_argLimLoc = argLimLoc;
+-	    _Multicore_messageLoop();
++	    _Multicore_messageLoop(false);
+ 	    break;
+ 
++	case "broadcast":
++	    postMessage("Broadcast received");
++	    /* FALLTHROUGH */
++
+ 	case "transfer":
+ 	    var info = ev.data;
+ 	    info.shift();
+ 	    for ( var [sab,k] of info )
+ 		_Multicore_knownSAB[k] = sab;
+-	    _Multicore_messageLoop();
++	    _Multicore_messageLoop(ev.data[0] == "broadcast");
+ 	    break;
+ 	}
+     };
+ 
+-function _Multicore_messageLoop() {
++function _Multicore_messageLoop(isBroadcast) {
+     const M = _Multicore_mem;
+ 
+     const ARG_INT = 1;
+@@ -101,30 +110,41 @@ function _Multicore_messageLoop() {
+     const ftmp = new Float64Array(tmp);
+ 
+     for (;;) {
+-	_Multicore_barrier.enter();
++	if (!isBroadcast)
++	    _Multicore_barrier.enter();
++
+ 	var size = M[_Multicore_sizeLoc];
+ 	var limit = M[_Multicore_limLoc];
+ 	var nextArg = M[_Multicore_nextArgLoc];
+ 	var argLimit = M[_Multicore_argLimLoc];
+ 
+ 	var item = Atomics.add(M, _Multicore_nextLoc, size);
+-	if (item < 0)
++	if (item < 0 && !isBroadcast)
+ 	    break;
+ 
+-	var userMem = parseArg();
+-	var args = [];
+-	while (nextArg < argLimit)
+-	    args.push(parseArg());
+-
+ 	var p = M[_Multicore_funcLoc];
+ 	var l = M[p++];
+ 	var id = "";
+ 	for ( var i=0 ; i < l ; i++ )
+ 	    id += String.fromCharCode(M[p++]);
++
++	postMessage("" + nextArg + " " + argLimit + " " + id);
++
++	var userMem = isBroadcast ? null : parseArg();
++	var args = [];
++	while (nextArg < argLimit)
++	    args.push(parseArg());
++
+ 	var fn = _Multicore_functions[id];
+ 	if (!fn)
+ 	    throw new Error("No function installed for ID '" + id + "'");
+ 
++	if (isBroadcast) {
++	    isBroadcast = false;
++	    fn.apply(null, args);
++	    continue;
++	}
++
+ 	// Can specialize the loop for different values of args.length
+ 	if (args.length > 0) {
+ 	    switch (size) {
