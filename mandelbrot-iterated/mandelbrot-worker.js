@@ -1,5 +1,5 @@
 importScripts("../util/barrier.js",
-	      "../util/parinvoke-worker.js",
+	      "../util/multicore-worker.js",
 	      "mandelbrot-parameters.js");
 
 Multicore.addFunction("mandelbrot", mandelbrot);
@@ -15,8 +15,6 @@ const colors = [0xFFFF0700, 0xFF2a2aa5, 0xFFFFff00, 0xFFa19eff,
 // and x in [xbase, xlimit).
 
 function mandelbrot(mem, ybase, ylimit, xbase, xlimit, magnification) {
-    if (!(mem instanceof SharedInt32Array) || mem.length != height*width)
-	throw new Error("Bad object: " + mem + " " + mem.length);
     const g_top = g_center_y + 1/magnification;
     const g_bottom = g_center_y - 1/magnification;
     const g_left = g_center_x - width/height*1/magnification;

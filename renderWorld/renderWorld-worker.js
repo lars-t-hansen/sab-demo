@@ -1,5 +1,5 @@
 importScripts("../util/barrier.js",
-	      "../util/parinvoke-worker.js");
+	      "../util/multicore-worker.js");
 
 Multicore.addFunction("MineKernel", MineKernel);
 

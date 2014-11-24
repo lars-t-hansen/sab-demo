@@ -1,5 +1,5 @@
 importScripts("../util/barrier.js",
-	      "../util/parinvoke-worker.js");
+	      "../util/multicore-worker.js");
 
 // http://blancosilva.wordpress.com/teaching/mathematical-imaging/edge-detection-the-convolution-approach/
 // Faler's approach.
