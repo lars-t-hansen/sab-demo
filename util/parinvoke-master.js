@@ -5,9 +5,9 @@
 //
 // Load this into your main program, after loading barrier.js.
 //
-// Call Multicore.init() to set things up (see spec below).
+// Call Multicore.init() to set things up, once.
 //
-// Call Multicore.build() to perform work (see spec below).
+// Call Multicore.build() to distribute and perform computation.
 
 const Multicore =
     {
@@ -246,6 +246,7 @@ function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args)
     function processArgs(outputMem, args) {
 	var argValues = [];
 	var newSAB = [];
+	var vno = 0;
 
 	pushArg(outputMem, true);
 	for ( var a of args )
@@ -268,12 +269,14 @@ function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args)
 		    argValues.push(itmp[0]);
 		    argValues.push(itmp[1]);
 		}
+		++vno;
 		return;
 	    }
 
 	    if (v instanceof SharedArrayBuffer) {
 		argValues.push(ARG_SAB);
 		argValues.push(registerSab(v));
+		++vno;
 		return;
 	    }
 
@@ -297,12 +300,13 @@ function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args)
 	    else if (v instanceof SharedFloat64Array)
 		tag = TAG_F64;
 	    else
-		throw new Error("Argument must be Number or shared array: " + v);
+		throw new Error("Argument #" + vno + " must be Number or shared array: " + v);
 
 	    argValues.push(ARG_ARRAY | (tag << 8));
 	    argValues.push(registerSab(v.buffer));
 	    argValues.push(v.byteOffset);
 	    argValues.push(v.length);
+	    ++vno;
 	}
 
 	function registerSab(sab) {
