@@ -324,12 +324,16 @@ There are seven distinguished locations in the private working memory
 that are distributed to the workers on startup:
 
   barrierLoc  - the first location for the shared barrier sync
-  funcLoc     - holds the function identifier for an invocation
+  funcLoc     - holds the index of the function name representation
   sizeLoc     - holds the number of words in a work item
   nextLoc     - holds the array index of the next work item
   limLoc      - holds the first array index past the last work item
   nextArgLoc  - holds the index of the first argument
   argLimLoc   - holds the first array index past the last argument
+
+The function name is a sequence of values: the first value is the
+number of characters in the name, then follows one character per
+element.
 
 The worker creates a barrier on the barrierLoc and then enters that
 barrier, and thus we're off.
