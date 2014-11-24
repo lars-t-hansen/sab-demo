@@ -8,6 +8,19 @@
 // Call Multicore.init() to set things up, once.
 //
 // Call Multicore.build() to distribute and perform computation.
+//
+// TODO
+// Things we want are:
+//  - Multicore.broadcast(), invoke a function on each worker, 
+//    usually to distribute or precompute data.
+//
+//  - The ability to pipeline multiple requests, in order to
+//    get better utilization.
+//
+//  - Pass more kinds of data as parameters to Multicore.build(),
+//    notably strings, booleans, undefined, simd data, and float32;
+//    also it would not be totally unreasonable to pass "small"
+//    objects and arrays by copy.
 
 const Multicore =
     {
