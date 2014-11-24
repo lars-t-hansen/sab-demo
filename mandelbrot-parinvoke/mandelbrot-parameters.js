@@ -5,6 +5,3 @@ const g_center_y = 0.131825904205311970493132056385139;
 // Pixel grid.  (0,0) correspons to (bottom,left)
 const height = 480;
 const width = 640;
-
-// Function IDs
-const Func_Mandelbrot = 0;

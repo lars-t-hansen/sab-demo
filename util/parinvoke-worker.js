@@ -1,11 +1,43 @@
-// The application must install its functions in Multicore.functions.
-// Each function takes an object (the output array), an even number of
-// loop bounds, and optionally additional arguments that were passed
-// by the master.
+// 24 November 2014 / lhansen@mozilla.com
 
-const Multicore =
-    {
-	functions: []
+// A simple data-parallel framework that maintains a worker pool and
+// invokes computations in parallel on shared memory.
+//
+// Load this into your worker code, after loading barrier.js.
+//
+// Call Multicore.addFunction() to register functions with the
+// framework.  The functions will be invoked when work orders are
+// received from the master.  (The framework owns the message loop.)
+//
+// Each worker function takes an object (the output array), an even
+// number of loop bounds (lo ... hi, for lo <= index < hi), and any
+// additional arguments that were passed by the master.
+//
+// Call Multicore.msg() to send a message to the console, via the
+// master.
+
+const Multicore = {};
+
+// Register a worker function.
+//
+// name is a string; user code will pass this string to Multicore.build()
+//   on the master side.
+// func is the function to invoke.  It will be called on the output object,
+//   an even number of index range values (pairs of lo and hi, lo <= index < hi),
+//   and on any other arguments user code passes to Multicore.build().
+//
+// Returns nothing.
+
+Multicore.addFunction =
+    function (name, func) {
+	_Multicore_functions[name] = func;
+    };
+
+// Print a message on the console.
+
+Multicore.msg =
+    function (msg) {
+	postMessage(String(msg));
     };
 
 var _Multicore_mem = null;
@@ -18,6 +50,7 @@ var _Multicore_nextArgLoc = 0;
 var _Multicore_argLimLoc = 0;
 var _Multicore_sab = null;
 var _Multicore_knownSAB = [];	// Direct map from ID to SAB
+var _Multicore_functions = {};
 
 onmessage =
     function (ev) {
@@ -83,10 +116,14 @@ function _Multicore_messageLoop() {
 	while (nextArg < argLimit)
 	    args.push(parseArg());
 
-	var id = M[_Multicore_funcLoc];
-	var fn = Multicore.functions[id];
+	var p = M[_Multicore_funcLoc];
+	var l = M[p++];
+	var id = "";
+	for ( var i=0 ; i < l ; i++ )
+	    id += String.fromCharCode(M[p++]);
+	var fn = _Multicore_functions[id];
 	if (!fn)
-	    throw new Error("No function installed for ID " + id);
+	    throw new Error("No function installed for ID '" + id + "'");
 
 	// Can specialize the loop for different values of args.length
 	if (args.length > 0) {

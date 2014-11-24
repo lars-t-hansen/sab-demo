@@ -1,15 +1,13 @@
-// 23 November 2014 / lhansen@mozilla.com
+// 24 November 2014 / lhansen@mozilla.com
 
 // A simple data-parallel framework that maintains a worker pool and
 // invokes computations in parallel on shared memory.
 //
-// Load this into your main program, then call Multicore.init() to set
-// things up.  Then call Multicore.build() to perform work.
+// Load this into your main program, after loading barrier.js.
 //
-// Functions are transmitted from the master to the workers as numeric
-// IDs; the master and the workers must agree on those IDs, and the
-// workers must set up local function tables.  See parinvoke-worker.js
-// for more information.
+// Call Multicore.init() to set things up (see spec below).
+//
+// Call Multicore.build() to perform work (see spec below).
 
 const Multicore =
     {
@@ -81,14 +79,18 @@ function _Multicore_init(numWorkers, workerScript, readyCallback) {
     }
 
     function messageHandler(ev) {
-	switch (ev.data[0]) {
-	case "MasterBarrier.dispatch":
-	    MasterBarrier.dispatch(ev.data[1]);
-	    break;
-	default:
-	    console.log(ev.data);
-	    break;
+	if (Array.isArray(ev.data) && ev.data.length >= 1) {
+	    switch (ev.data[0]) {
+	    case "MasterBarrier.dispatch":
+		MasterBarrier.dispatch(ev.data[1]);
+		break;
+	    default:
+		console.log(ev.data);
+		break;
+	    }
 	}
+	else
+	    console.log(ev.data);
     }
 }
 
@@ -96,8 +98,8 @@ function _Multicore_init(numWorkers, workerScript, readyCallback) {
 //
 // doneCallback is a function, it will be invoked in the master once
 //   the work is finished.
-// fnIdent is the numeric identifier of the remote function to invoke.
-//   See top of file for more information.
+// fnIdent is the string identifier of the remote function to invoke.
+//   The worker must register an appropriate handler.
 // outputMem is a SharedTypedArray or SharedArrayBuffer that will (in
 //   principle, though it's up to user code) receive the results of
 //   the computation.
@@ -111,9 +113,6 @@ function _Multicore_init(numWorkers, workerScript, readyCallback) {
 // You can call this function repeatedly, but only one call can be
 // outstanding: only when the doneCallback has been invoked can
 // Multicore.build be called again.
-//
-// TODO: it really would not be a big problem to pass a string for the
-// function name so that we could avoid numeric identifiers.
 
 function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args) {
     const M = _Multicore_mem;
@@ -160,6 +159,8 @@ function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args)
 		var p = _Multicore_alloc;
 		p = installArgs(p, argValues);
 		p = installItems(p, fnIdent, itemSize, items);
+		if (p >= M.length)
+		    throw new Error("Not enough working memory");
 		_Multicore_barrier.release();
 	    };
 	// Signal message loop exit.
@@ -180,6 +181,8 @@ function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args)
 	var p = _Multicore_alloc;
 	p = installArgs(p, argValues);
 	p = installItems(p, fnIdent, itemSize, items);
+	if (p >= M.length)
+	    throw new Error("Not enough working memory");
     }
     _Multicore_barrier.release();
 
@@ -218,7 +221,10 @@ function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args)
 
     function installItems(p, fn, wordsPerItem, items) {
 	M[_Multicore_sizeLoc] = wordsPerItem;
-	M[_Multicore_funcLoc] = fn;
+	M[_Multicore_funcLoc] = p;
+	M[p++] = fn.length;
+	for ( var c of fn )
+	    M[p++] = c.charCodeAt(0);
 	M[_Multicore_nextLoc] = p;
 	switch (wordsPerItem) {
 	case 2:

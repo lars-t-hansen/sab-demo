@@ -1,7 +1,5 @@
 // 'filename' should be defined by a previously loaded script.
 
-const Func_convolve = 0;
-
 if (!this.filename) {
     alert("No file name defined");
     throw new Error("Aborted");
@@ -25,7 +23,7 @@ function convolveImage() {
     input = new SharedUint8Array(h*w);
     input.set(image.data);
     output = new SharedUint8Array(h*w);
-    Multicore.build(displayResult, Func_convolve, output, [[0,h], [0,w]], input, h, w);
+    Multicore.build(displayResult, "convolve", output, [[0,h], [0,w]], input, h, w);
 }
 
 function displayResult() {

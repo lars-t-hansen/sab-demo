@@ -2,8 +2,7 @@ importScripts("../util/barrier.js",
 	      "../util/parinvoke-worker.js",
 	      "mandelbrot-parameters.js");
 
-// Set this to larger values to zoom in on the center.
-const magnification = 100;
+Multicore.addFunction("mandelbrot", mandelbrot);
 
 // Maximum iterations per pixel.
 const MAXIT = 1000;
@@ -15,28 +14,27 @@ const colors = [0xFFFF0700, 0xFF2a2aa5, 0xFFFFff00, 0xFFa19eff,
 // Compute a square of pixels into mem with y in [ybase, ylimit)
 // and x in [xbase, xlimit).
 
-Multicore.functions[Func_Mandelbrot] =
-    function (mem, ybase, ylimit, xbase, xlimit) {
-	if (!(mem instanceof SharedInt32Array) || mem.length != height*width)
-	    throw new Error("Bad object: " + mem + " " + mem.length);
-	const g_top = g_center_y + 1/magnification;
-	const g_bottom = g_center_y - 1/magnification;
-	const g_left = g_center_x - width/height*1/magnification;
-	const g_right = g_center_x + width/height*1/magnification;
-	for ( var Py=ybase ; Py < ylimit ; Py++ ) {
-	    for ( var Px=xbase ; Px < xlimit ; Px++ ) {
-		var x0 = g_left+(Px/width)*(g_right-g_left);
-		var y0 = g_bottom+(Py/height)*(g_top-g_bottom);
-		var x = 0.0;
-		var y = 0.0;
-		var it = 0;
-		while (x*x + y*y < 4.0 && it < MAXIT) {
-		    var xtemp = x*x - y*y + x0;
-		    y = 2.0*x*y + y0;
-		    x = xtemp;
-		    it++;
-		}
-		mem[Py*width+Px] = it == MAXIT ? 0xFF000000 : colors[it & 7];
+function mandelbrot(mem, ybase, ylimit, xbase, xlimit, magnification) {
+    if (!(mem instanceof SharedInt32Array) || mem.length != height*width)
+	throw new Error("Bad object: " + mem + " " + mem.length);
+    const g_top = g_center_y + 1/magnification;
+    const g_bottom = g_center_y - 1/magnification;
+    const g_left = g_center_x - width/height*1/magnification;
+    const g_right = g_center_x + width/height*1/magnification;
+    for ( var Py=ybase ; Py < ylimit ; Py++ ) {
+	for ( var Px=xbase ; Px < xlimit ; Px++ ) {
+	    var x0 = g_left+(Px/width)*(g_right-g_left);
+	    var y0 = g_bottom+(Py/height)*(g_top-g_bottom);
+	    var x = 0.0;
+	    var y = 0.0;
+	    var it = 0;
+	    while (x*x + y*y < 4.0 && it < MAXIT) {
+		var xtemp = x*x - y*y + x0;
+		y = 2.0*x*y + y0;
+		x = xtemp;
+		it++;
 	    }
+	    mem[Py*width+Px] = it == MAXIT ? 0xFF000000 : colors[it & 7];
 	}
-    };
+    }
+}
