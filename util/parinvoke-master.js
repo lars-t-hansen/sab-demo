@@ -3,7 +3,7 @@
 // A simple data-parallel framework that maintains a worker pool and
 // invokes computations in parallel on shared memory.
 //
-// Load this into your main program, after loading barrier.js.
+// Load this into your main program, after loading asymmetric-barrier.js.
 //
 // Call Multicore.init() to set things up, once.
 //

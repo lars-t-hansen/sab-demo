@@ -1,4 +1,4 @@
-importScripts("../util/barrier.js",
+importScripts("../util/asymmetric-barrier.js",
 	      "../util/parinvoke-worker.js");
 
 Multicore.addFunction("MineKernel", MineKernel);
