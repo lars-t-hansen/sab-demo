@@ -1,4 +1,4 @@
-load("bump-alloc.js");
+load("../util/bump-alloc.js");
 
 var nbytes = 1024;
 var n = nbytes + SharedBumpAlloc.NUMBYTES;
