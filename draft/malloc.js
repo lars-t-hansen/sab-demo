@@ -1,4 +1,4 @@
-// Shared-memory memory management: a basic library.
+// Shared-memory memory management: a very basic library.
 // 2014-11-28 / lhansen@mozilla.com
 
 // Create a memory manager on a piece of shared memory.
@@ -7,8 +7,8 @@
 // "byteOffset" is an offset within sab where the available memory starts.
 //    This will be rounded up by the memmgr to a useful boundary.
 // "bytesAvail" is the number of bytes in sab starting at byteOffset
-//    available to the memmgr.  This number will be rounded down to
-//    by the memmgr to a useful boundary.
+//    available exclusively to the memmgr.  This number will be rounded
+//    down by the memmgr to a useful boundary.
 // "who" is a string, either "master" or "worker".
 //
 // This will use a few words of shared memory for its own data
