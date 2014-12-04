@@ -1,4 +1,4 @@
-const numWorkers = 4;
+const numWorkers = 8;
 const maxIterations = 120;
 const animate = true;
 
@@ -6,7 +6,7 @@ Multicore.init(numWorkers, "mandelbrot-worker.js", doMandelbrot);
 
 const rawmem = new SharedArrayBuffer(height*width*4*2);
 const mem1 = new SharedInt32Array(rawmem, 0, height*width);
-const mem2 = new SharedInt32Array(rawmem, height*width, height*width);
+const mem2 = new SharedInt32Array(rawmem, height*width*4, height*width);
 
 var magnification = 1;
 var iterations = 0;
@@ -26,6 +26,7 @@ function showMandelbrot() {
 	iterations++;
 	magnification *= 1.1;
 	mem = (memnow == mem1) ? mem2 : mem1;
+	// Overlap display of this frame with computation of the next.
 	doMandelbrot();
     }
     else {
