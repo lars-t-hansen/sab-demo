@@ -1,4 +1,5 @@
-const numWorkers = 8;
+// numWorkers is defined by the html document, for convenience.
+//const numWorkers = ...;
 const magFactor = 1.05;
 const maxIterations = 250;
 const animate = true;
@@ -32,7 +33,9 @@ function showMandelbrot() {
     }
     else {
 	var t = Date.now() - timeBefore;
-	console.log("Number of workers: " + numWorkers + "  Compute time: " + t + "ms  FPS=" + (iterations/(t/1000)));
+	var fps = Math.round((iterations/(t/1000))*10)/10;
+	console.log("Number of workers: " + numWorkers + "  Compute time: " + t + "ms  FPS=" + fps);
+	document.getElementById('caption').innerHTML += '; FPS=' + fps;
 	display = true;
     }
     if (display) 
