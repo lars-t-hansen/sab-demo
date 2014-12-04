@@ -1,4 +1,8 @@
-// 24 November 2014 / lhansen@mozilla.com
+// Data-parallel framework on shared memory: Multicore.build()
+// lhansen@mozilla.com / 3 December 2014
+
+// REQUIRE:
+//   asymmetric-barrier.js
 
 // A simple data-parallel framework that maintains a worker pool and
 // invokes computations in parallel on shared memory.
@@ -8,6 +12,8 @@
 // Call Multicore.init() to set things up, once.
 //
 // Call Multicore.build() to distribute and perform computation.
+
+"use strict";
 
 const Multicore =
     {
@@ -136,6 +142,8 @@ function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args)
     const itmp = new Int32Array(tmp);
     const ftmp = new Float64Array(tmp);
 
+    if (!_Multicore_barrier.isQuiescent())
+	throw new Error("Do not call Multicore.build until the previous call has completed!");
     for ( var x of indexSpace )
 	if (x.length != 2 || typeof x[0] != 'number' || typeof x[1] != 'number' || (x[0]|0) != x[0] || (x[1]|0) != x[1])
 	    throw new Error("Bad indexSpace element " + x)
@@ -161,7 +169,8 @@ function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args)
 		p = installItems(p, fnIdent, itemSize, items);
 		if (p >= M.length)
 		    throw new Error("Not enough working memory");
-		_Multicore_barrier.release();
+		if (!_Multicore_barrier.release())
+		    throw new Error("Internal barrier error @ 1");
 	    };
 	// Signal message loop exit.
 	// Any negative number larger than numWorkers will do.
@@ -184,7 +193,8 @@ function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args)
 	if (p >= M.length)
 	    throw new Error("Not enough working memory");
     }
-    _Multicore_barrier.release();
+    if (!_Multicore_barrier.release())
+	throw new Error("Internal barrier error @ 2");
 
     function sliceSpace(lo, lim) {
 	var items = [];
@@ -311,7 +321,7 @@ function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args)
 
 	function registerSab(sab) {
 	    for ( var i=0 ; i < _Multicore_knownSAB.length ; i++ )
-		if (_Multicore_knownSAB[i] === x)
+		if (_Multicore_knownSAB[i] === sab)
 		    return i;
 	    var k = _Multicore_knownSAB.length;
 	    _Multicore_knownSAB.push(sab);

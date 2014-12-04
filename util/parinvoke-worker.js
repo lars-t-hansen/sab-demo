@@ -1,4 +1,7 @@
-// 24 November 2014 / lhansen@mozilla.com
+// 3 December 2014 / lhansen@mozilla.com
+
+// REQUIRE:
+//   asymmetric-barrier.js
 
 // A simple data-parallel framework that maintains a worker pool and
 // invokes computations in parallel on shared memory.
@@ -15,6 +18,8 @@
 //
 // Call Multicore.msg() to send a message to the console, via the
 // master.
+
+"use strict";
 
 const Multicore = {};
 
