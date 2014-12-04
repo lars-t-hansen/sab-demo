@@ -1,0 +1,9 @@
+Can guesstimate # of cores from desktop vs mobile: 4 vs 2, say, and multiply by 1.3*(year-2014).
+
+Arguments for API:
+ - propose a new API: navigator.approximateNumberOfCores() that is just a guess, as above,
+   or something better, like an internal measurement plus a fudge factor (could be dynamic too)
+ - demonstrate (or not) that using this number on a range of benchmarks does (or does not)
+   give results that are about as good as when using the actual number of cores
+
+
