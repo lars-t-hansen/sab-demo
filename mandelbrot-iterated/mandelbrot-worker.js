@@ -5,7 +5,7 @@ importScripts("../util/asymmetric-barrier.js",
 Multicore.addFunction("mandelbrot", mandelbrot);
 
 // Maximum iterations per pixel.
-const MAXIT = 1000;
+const MAXIT = 200;
 
 // Colors are ABGR with A=255.
 const colors = [0xFFFF0700, 0xFF2a2aa5, 0xFFFFff00, 0xFFa19eff,
