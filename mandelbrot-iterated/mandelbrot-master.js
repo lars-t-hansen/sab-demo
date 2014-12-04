@@ -1,5 +1,6 @@
 const numWorkers = 8;
-const maxIterations = 120;
+const magFactor = 1.05;
+const maxIterations = 250;
 const animate = true;
 
 Multicore.init(numWorkers, "mandelbrot-worker.js", doMandelbrot);
@@ -24,7 +25,7 @@ function showMandelbrot() {
 	timeBefore = Date.now();
     if (iterations < maxIterations) {
 	iterations++;
-	magnification *= 1.1;
+	magnification *= magFactor;
 	mem = (memnow == mem1) ? mem2 : mem1;
 	// Overlap display of this frame with computation of the next.
 	doMandelbrot();
