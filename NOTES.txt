@@ -7,3 +7,22 @@ Arguments for API:
    give results that are about as good as when using the actual number of cores
 
 
+
+----------------------------------------
+
+Tools:
+
+race detection
+deadlock detection
+performance of locking / contention etc
+
+race detection (conversation with Julian):
+ - dirty map per byte in the SAB?  two-bit state, one bit for dirty-read and one for dirty-write
+ - reading if dirty-read is set is ok
+ - writing if dirty-read is set is not ok
+ - reading or writing if dirty-write is set is not ok
+ - a barrier may clear the map, but unclear: we are non-racy if there is communication, ie, barrier on both sides,
+   so this is an issue
+ - worry about false positives, so make sure to set bits in proper relation to the operation
+ - loads / stores of bits may be reordered wrt to operation, which is a problem
+ - we also need some sort of stack trace or program location, from both sides
