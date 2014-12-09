@@ -1,4 +1,8 @@
 <!-- Parallel version of the Kraken gaussian blur program -->
+<!-- Observe that the sequential version of this program is probably buggy, as the blur
+     of pixels to the right of and below previously processed pixels will incorporate
+     the blurred values, not the original pixel values.  This parallel version fixes that,
+     at the cost of using an extra array.  -->
 <!DOCTYPE html>
 <html>
 <head>
@@ -51,7 +55,7 @@
     <script src="../util/parinvoke-master.js"></script>
     <script>
       var sigma = 10; // radius
-      var kernel, kernelSum, sharedData;
+      var kernel, kernelSum;
       const kernelSize = 7;
       const numWorkers = 4;
 
@@ -108,15 +112,15 @@
           var len = data.length;
           var startTime = (new Date()).getTime();
 
-          if (!sharedData)
-            sharedData = new SharedInt32Array(data.length);
-          sharedData.set(data);
+          var sharedDataIn = new SharedInt32Array(data.length);
+          var sharedDataOut = new SharedInt32Array(data.length);
+          sharedDataIn.set(data);
           Multicore.build(function () {
             var finishTime = Date.now() - startTime;
-            data.set(sharedData);
+            data.set(sharedDataOut);
             ctx.putImageData(imgData, 0, 0);
             results.innerHTML = "Finished: " + finishTime + "ms (" + numWorkers + " workers)";
-          }, "blurKernel", sharedData, [[0, height], [0, width]], height, width, kernel, kernelSize, kernelSum);
+          }, "blurKernel", sharedDataOut, [[0, height], [0, width]], sharedDataIn, height, width, kernel, kernelSize, kernelSum);
         }, 10);
       }
     </script>
