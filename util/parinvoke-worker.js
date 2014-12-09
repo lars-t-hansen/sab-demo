@@ -1,4 +1,6 @@
-// 3 December 2014 / lhansen@mozilla.com
+// Data-parallel framework on shared memory: Multicore.build()
+// Worker side.
+// lhansen@mozilla.com / 8 December 2014
 
 // REQUIRE:
 //   asymmetric-barrier.js
@@ -54,7 +56,7 @@ var _Multicore_limLoc = 0;
 var _Multicore_nextArgLoc = 0;
 var _Multicore_argLimLoc = 0;
 var _Multicore_sab = null;
-var _Multicore_knownSAB = [];	// Direct map from ID to SAB
+var _Multicore_knownSAB = [null];	// Direct map from ID to SAB
 var _Multicore_functions = {};
 
 onmessage =
@@ -70,6 +72,7 @@ onmessage =
 	    _Multicore_limLoc = limLoc;
 	    _Multicore_nextArgLoc = nextArgLoc;
 	    _Multicore_argLimLoc = argLimLoc;
+	    _Multicore_knownSAB[0] = sab;
 	    _Multicore_messageLoop();
 	    break;
 
@@ -129,6 +132,14 @@ function _Multicore_messageLoop() {
 	var fn = _Multicore_functions[id];
 	if (!fn)
 	    throw new Error("No function installed for ID '" + id + "'");
+
+	// Passing the private memory as the output buffer is a special signal.
+	if (userMem == _Multicore_mem.buffer) {
+	    // Broadcast.  Do not expect any work items, just invoke the function and
+	    // reenter the barrier.
+	    fn.apply(null, args);
+	    continue;
+	}
 
 	// Can specialize the loop for different values of args.length
 	if (args.length > 0) {

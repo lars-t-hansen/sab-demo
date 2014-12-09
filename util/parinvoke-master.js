@@ -1,5 +1,6 @@
 // Data-parallel framework on shared memory: Multicore.build()
-// lhansen@mozilla.com / 3 December 2014
+// Master side.
+// lhansen@mozilla.com / 8 December 2014
 
 // REQUIRE:
 //   asymmetric-barrier.js
@@ -12,13 +13,16 @@
 // Call Multicore.init() to set things up, once.
 //
 // Call Multicore.build() to distribute and perform computation.
+//
+// Call Multicore.broadcast() to invoke a function on all workers.
 
 "use strict";
 
 const Multicore =
     {
 	init: _Multicore_init,
-	build: _Multicore_build
+	build: _Multicore_build,
+	broadcast: _Multicore_broadcast
     };
 
 var _Multicore_workers = [];
@@ -34,7 +38,7 @@ var _Multicore_nextLoc = 0;
 var _Multicore_limLoc = 0;
 var _Multicore_nextArgLoc = 0;
 var _Multicore_argLimLoc = 0;
-var _Multicore_knownSAB = [];
+var _Multicore_knownSAB = [null];
 
 // Multicore.init()
 //
@@ -63,6 +67,7 @@ function _Multicore_init(numWorkers, workerScript, readyCallback) {
     _Multicore_nextArgLoc = _Multicore_alloc++;
     _Multicore_argLimLoc = _Multicore_alloc++;
     _Multicore_callback = readyCallback;
+    _Multicore_knownSAB[0] = _Multicore_mem.buffer;
     for ( var i=0 ; i < numWorkers ; i++ ) {
 	var w = new Worker(workerScript);
 	w.onmessage = messageHandler;
@@ -116,11 +121,43 @@ function _Multicore_init(numWorkers, workerScript, readyCallback) {
 //   values and will be marshalled and passed as arguments to the user
 //   function on the worker side.
 //
-// You can call this function repeatedly, but only one call can be
-// outstanding: only when the doneCallback has been invoked can
-// Multicore.build be called again.
+// You can call this function repeatedly, but only one call to build
+// or broadcast can be outstanding: only when the doneCallback has
+// been invoked can Multicore.build or Multicore.broadcast be called
+// again.
 
 function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args) {
+    if (!Array.isArray(indexSpace) || indexSpace.length < 1)
+	throw new Error("Bad indexSpace: " + indexSpace);
+    for ( var x of indexSpace )
+	if (x.length != 2 || typeof x[0] != 'number' || typeof x[1] != 'number' || (x[0]|0) != x[0] || (x[1]|0) != x[1])
+	    throw new Error("Bad indexSpace element " + x)
+    // TODO: should check that type of outputMem is SharedArrayBuffer or SharedTypedArray
+    if (!outputMem)
+	throw new Error("Bad output memory: " + outputmem);
+    return _Multicore_comm(doneCallback, fnIdent, outputMem, indexSpace, args);
+}
+
+// Multicore.broadcast()
+//
+// doneCallback is a function, it will be invoked in the master once
+//   the work is finished.
+// fnIdent is the string identifier of the remote function to invoke.
+//   The worker must register an appropriate handler.
+// The ...args can be number, SharedTypedArray, or SharedArrayBuffer
+//   values and will be marshalled and passed as arguments to the user
+//   function on the worker side.
+//
+// You can call this function repeatedly, but only one call to build
+// or broadcast can be outstanding: only when the doneCallback has
+// been invoked can Multicore.build or Multicore.broadcast be called
+// again.
+
+function _Multicore_broadcast(doneCallback, fnIdent, ...args) {
+    return _Multicore_comm(doneCallback, fnIdent, null, [], args);
+}
+
+function _Multicore_comm(doneCallback, fnIdent, outputMem, indexSpace, args) {
     const M = _Multicore_mem;
 
     const ARG_INT = 1;
@@ -142,13 +179,17 @@ function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args)
     const itmp = new Int32Array(tmp);
     const ftmp = new Float64Array(tmp);
 
+    // Broadcast?
+    if (outputMem === null)
+	outputMem = _Multicore_mem.buffer;
     if (!_Multicore_barrier.isQuiescent())
 	throw new Error("Do not call Multicore.build until the previous call has completed!");
-    for ( var x of indexSpace )
-	if (x.length != 2 || typeof x[0] != 'number' || typeof x[1] != 'number' || (x[0]|0) != x[0] || (x[1]|0) != x[1])
-	    throw new Error("Bad indexSpace element " + x)
     var items;
     switch (indexSpace.length) {
+    case 0:
+	// Broadcast?
+	items = [];
+	break;
     case 1:
 	items = sliceSpace(indexSpace[0][0], indexSpace[0][1]);
 	break;
@@ -237,6 +278,8 @@ function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args)
 	    M[p++] = c.charCodeAt(0);
 	M[_Multicore_nextLoc] = p;
 	switch (wordsPerItem) {
+	case 0:
+	    break;
 	case 2:
 	    for ( var i of items )
 		for ( var j of i )
