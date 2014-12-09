@@ -33,8 +33,8 @@ function setupParameters(_height, _width, _left, _right, _top, _bottom,
     g_right = _right;
     g_top = _top;
     g_bottom = _bottom;
-    shadows = !!_shadows;
-    reflection = !!_reflection;
+    shadows = _shadows;
+    reflection = _reflection;
     reflection_depth = _reflection_depth;
     eye = DL3(_eye_x, _eye_y, _eye_z);
     light = DL3(_light_x, _light_y, _light_z);

@@ -33,7 +33,7 @@ function doRaytrace1() {
     Multicore.broadcast(doRaytrace2, "setupParameters", 
 			height, width,
 			g_left, g_right, g_top, g_bottom,
-			shadows ? 1 : 0, reflection ? 1 : 0, reflection_depth,
+			shadows, reflection, reflection_depth,
 			eye.x, eye.y, eye.z,
 			light.x, light.y, light.z);
 }
