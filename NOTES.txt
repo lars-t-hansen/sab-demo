@@ -26,3 +26,11 @@ race detection (conversation with Julian):
  - worry about false positives, so make sure to set bits in proper relation to the operation
  - loads / stores of bits may be reordered wrt to operation, which is a problem
  - we also need some sort of stack trace or program location, from both sides
+
+
+----------------------------------------
+
+An interesting demo would be a simple OCR app.  Part of this would be
+recognizing connected components, possibly breaking them apart, and
+then matching components to letters and perhaps words (using a
+dictionary, say).
