@@ -92,7 +92,10 @@ function _Multicore_messageLoop() {
     const ARG_INT = 1;
     const ARG_FLOAT = 2;
     const ARG_SAB = 3;
-    const ARG_ARRAY = 4;
+    const ARG_STA = 4;
+    const ARG_BOOL = 5;
+    const ARG_UNDEF = 6;
+    const ARG_NULL = 7;
 
     const TAG_SAB = 1;
     const TAG_I8 = 2;
@@ -198,7 +201,7 @@ function _Multicore_messageLoop() {
 	    return ftmp[0];
 	case ARG_SAB:
 	    return _Multicore_knownSAB[M[nextArg++]];
-	case ARG_ARRAY:
+	case ARG_STA:
 	    var sab = _Multicore_knownSAB[M[nextArg++]];
 	    var byteOffset = M[nextArg++];
 	    var length = M[nextArg++];
@@ -214,6 +217,12 @@ function _Multicore_messageLoop() {
 	    case TAG_F64: return new SharedFloat64Array(sab, byteOffset, length);
 	    default: throw new Error("Bad array typetag: " + tag.toString(16));
 	    }
+	case ARG_BOOL:
+	    return !!(tag >> 8);
+	case ARG_UNDEF:
+	    return undefined;
+	case ARG_NULL:
+	    return null;
 	}
     }
 }

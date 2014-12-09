@@ -19,12 +19,12 @@
 //
 // TODO:
 //  - Currently only one build or broadcast can be outstanding at one
-//    time.  That's not a huge hardship but it's not hard to see that
-//    the master might want to create a queue of builds and broadcasts
-//    and receive a callback once they're all done.  There would
-//    probably be an efficiency win if we could avoid the trip through
-//    the master by using worker-only barriers between the stages in
-//    such a pipeline.
+//    time.  That's not a huge hardship but it's easy to see that the
+//    master might want to create a queue of builds and broadcasts and
+//    receive a callback once they're all done.  There would probably
+//    be an efficiency win if we could avoid the trip through the
+//    master by using worker-only barriers between the stages in such
+//    a pipeline.
 //
 //  - The original conception of Multicore.build allowed the index
 //    space to contain hints to aid load balancing.  It would be
@@ -34,6 +34,12 @@
 //  - Nested parallelism is desirable, ie, a worker should be allowed
 //    to invoke Multicore.build, suspending until that subcomputation
 //    is done.
+//
+//  - More data types should be supported for transmission in build()
+//    and broadcast(): float32, simd types, strings; also plain objects,
+//    arrays, and typedarrays would be very helpful, at least for small
+//    non-self-referential objects; we could have an arbitrary cutoff
+//    or a warning for large ones.
 
 "use strict";
 
@@ -136,9 +142,9 @@ function _Multicore_init(numWorkers, workerScript, readyCallback) {
 // indexSpace is an array of length-2 arrays determining the index
 //   space of the computation; workers will be invoked on subvolumes
 //   of this space in an unpredictable order.
-// The ...args can be number, SharedTypedArray, or SharedArrayBuffer
-//   values and will be marshalled and passed as arguments to the user
-//   function on the worker side.
+// The ...args can be SharedTypedArray, SharedArrayBuffer, number,
+//   bool, undefined, or null values and will be marshalled and passed
+//   as arguments to the user function on the worker side.
 //
 // You can call this function repeatedly, but only one call to build
 // or broadcast can be outstanding: only when the doneCallback has
@@ -163,8 +169,8 @@ function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args)
 //   the work is finished.
 // fnIdent is the string identifier of the remote function to invoke.
 //   The worker must register an appropriate handler.
-// The ...args can be number, SharedTypedArray, or SharedArrayBuffer
-//   values and will be marshalled and passed as arguments to the user
+// The ...args can be values of the types as described for build(),
+//   and will be marshalled and passed as arguments to the user
 //   function on the worker side.
 //
 // You can call this function repeatedly, but only one call to build
@@ -182,7 +188,10 @@ function _Multicore_comm(doneCallback, fnIdent, outputMem, indexSpace, args) {
     const ARG_INT = 1;
     const ARG_FLOAT = 2;
     const ARG_SAB = 3;
-    const ARG_ARRAY = 4;
+    const ARG_STA = 4;
+    const ARG_BOOL = 5;
+    const ARG_UNDEF = 6;
+    const ARG_NULL = 7;
 
     const TAG_SAB = 1;
     const TAG_I8 = 2;
@@ -345,6 +354,24 @@ function _Multicore_comm(doneCallback, fnIdent, outputMem, indexSpace, args) {
 		return;
 	    }
 
+	    if (v === undefined) {
+		argValues.push(ARG_UNDEF);
+		++vno;
+		return;
+	    }
+
+	    if (v === null) {
+		argValues.push(ARG_NULL);
+		++vno;
+		return;
+	    }
+
+	    if (v === true || v === false) {
+		argValues.push(ARG_BOOL | (v ? 256 : 0));
+		++vno;
+		return;
+	    }
+
 	    if (v instanceof SharedArrayBuffer) {
 		argValues.push(ARG_SAB);
 		argValues.push(registerSab(v));
@@ -374,7 +401,7 @@ function _Multicore_comm(doneCallback, fnIdent, outputMem, indexSpace, args) {
 	    else
 		throw new Error("Argument #" + vno + " must be Number or shared array: " + v);
 
-	    argValues.push(ARG_ARRAY | (tag << 8));
+	    argValues.push(ARG_STA | (tag << 8));
 	    argValues.push(registerSab(v.buffer));
 	    argValues.push(v.byteOffset);
 	    argValues.push(v.length);
@@ -418,6 +445,7 @@ The master has the following actions it wants to accomplish:
 
  - transfer new SAB values
  - perform parallel work
+ - broadcast something
 
 
 Transfer:
@@ -435,13 +463,15 @@ One or more "arguments" are passed in the args area.
 Suppose nextArgLoc < argLimLoc.  Let A=nextArgLoc and M be the
 private working memory.
 
-  the M[A] is a tag: int, float, sab, or array
+  the M[A] is a tag: int, float, bool, null, undefined, sab, or sta
+  if tag==null or tag==undefined then there's no data
+  if tag==bool then the eight bit of the tag is 1 or 0
   if tag==int, then the int follows immediately
   if tag==float, there may be padding and then the float follows immediately
     in native word order
   if tag==sab, then there is one argument word:
     - sab identifier
-  if tag==array, then the tag identifies the array type, and there are
+  if tag==sta, then the tag identifies the array type, and there are
     the following three argument words:
     - sab identifier
     - byteoffset, or 0 for 
@@ -452,5 +482,13 @@ array type.
 
 The arguments past the first are passed to the worker as arguments
 after the index space arguments.
+
+
+Broadcast:
+
+This is exactly as for computation, except that the output array
+argument is always the Multicore system's private metadata SAB, and
+there are no work items.  The worker side recognizes the array as a
+signal and calls the target function once on each worker.
 
 */
