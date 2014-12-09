@@ -81,7 +81,13 @@ World.prototype.toggleExecutionMode = function () {
         this.MODE = "workers";
 	if (this.sharedResultArray == null) {
 	    this.sharedResultArray = new SharedInt32Array(this.w*this.h);
-	    Multicore.init(numWorkers, "renderWorld-worker.js", () => { READY=true });
+	    Multicore.init(numWorkers,
+			   "renderWorld-worker.js",
+			   () => {
+			       Multicore.broadcast(() => { READY=true; },
+						   "Setup",
+						   this.w, this.h, this.map, this.texmap);
+			   });
 	}
         document.getElementById("togglebutton").innerHTML = "Go Sequential";
 	break;
@@ -319,8 +325,7 @@ World.prototype.renderWorldWorkers = function(k) {
 	return false;
     this.updateTickParams();
     Multicore.build(k, "MineKernel", this.sharedResultArray, [[0,this.w*this.h]],
-		    this.w, this.h, this.map, this.texmap, this.yCos, this.ySin, this.xCos, this.xSin,
-		    this.ox, this.oy, this.oz);
+		    this.yCos, this.ySin, this.xCos, this.xSin, this.ox, this.oy, this.oz);
     this.result = this.sharedResultArray;
     return true;
 }

@@ -2,8 +2,17 @@ importScripts("../util/asymmetric-barrier.js",
 	      "../util/parinvoke-worker.js");
 
 Multicore.addFunction("MineKernel", MineKernel);
+Multicore.addFunction("Setup", Setup);
 
-function MineKernel(result, lo, hi, w, h, map, texmap, yCos, ySin, xCos, xSin, ox, oy, oz) {
+var wself = {};
+
+function Setup(w, h, map, texmap) {
+    wself = { w, h, map, texmap };
+}
+
+function MineKernel(result, lo, hi, yCos, ySin, xCos, xSin, ox, oy, oz) {
+    var { w, h, map, texmap } = wself;
+
     for ( var index=lo ; index < hi ; index++ ) {
 	var x = Math.floor(index/w);
 	var y = index-(x*w);
