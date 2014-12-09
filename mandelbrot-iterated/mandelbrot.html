@@ -1,7 +1,8 @@
 <html>
 <body>
 <script>
-const numWorkers = 8;
+var param = String(document.location).match(/cores=(\d+)/);
+const numWorkers = param ? parseInt(param[1]) : 8;
 document.write("<div id='caption' style='font-size: large'>Number of workers: " + numWorkers + "</div><div>&nbsp</div>");
 </script>
 <canvas id=mycanvas></canvas>
