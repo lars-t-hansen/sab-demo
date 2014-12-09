@@ -1,6 +1,6 @@
 // Data-parallel framework on shared memory: Multicore.build()
 // Master side.
-// lhansen@mozilla.com / 8 December 2014
+// lhansen@mozilla.com / 9 December 2014
 
 // REQUIRE:
 //   asymmetric-barrier.js
@@ -14,7 +14,26 @@
 //
 // Call Multicore.build() to distribute and perform computation.
 //
-// Call Multicore.broadcast() to invoke a function on all workers.
+// Call Multicore.broadcast() to invoke a function on all workers, eg
+// to precompute intermediate data or distribute invariant parameters.
+//
+// TODO:
+//  - Currently only one build or broadcast can be outstanding at one
+//    time.  That's not a huge hardship but it's not hard to see that
+//    the master might want to create a queue of builds and broadcasts
+//    and receive a callback once they're all done.  There would
+//    probably be an efficiency win if we could avoid the trip through
+//    the master by using worker-only barriers between the stages in
+//    such a pipeline.
+//
+//  - The original conception of Multicore.build allowed the index
+//    space to contain hints to aid load balancing.  It would be
+//    useful to import that idea, probably, or at least experiment
+//    with it to see if it really affects performance.
+//
+//  - Nested parallelism is desirable, ie, a worker should be allowed
+//    to invoke Multicore.build, suspending until that subcomputation
+//    is done.
 
 "use strict";
 
