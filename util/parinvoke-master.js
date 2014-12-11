@@ -26,20 +26,27 @@
 //    master by using worker-only barriers between the stages in such
 //    a pipeline.
 //
-//  - The original conception of Multicore.build allowed the index
-//    space to contain hints to aid load balancing.  It would be
-//    useful to import that idea, probably, or at least experiment
-//    with it to see if it really affects performance.
-//
 //  - Nested parallelism is desirable, ie, a worker should be allowed
 //    to invoke Multicore.build, suspending until that subcomputation
 //    is done.
 //
 //  - More data types should be supported for transmission in build()
-//    and broadcast(): float32, simd types, strings; also plain objects,
-//    arrays, and typedarrays would be very helpful, at least for small
-//    non-self-referential objects; we could have an arbitrary cutoff
-//    or a warning for large ones.
+//    and broadcast(): float32, simd types, strings; also plain
+//    objects, arrays, and typedarrays would be very helpful, at least
+//    for small non-self-referential objects; we could have an
+//    arbitrary cutoff (bleah) or a warning for large ones.
+//
+//  - The original conception of Multicore.build allowed the index
+//    space to contain hints to aid load balancing.  It would be
+//    useful to import that idea, probably, or at least experiment
+//    with it to see if it really affects performance.
+//
+//  - There is unnecessary lock overhead in having the single work
+//    queue (the pointer for the next item is hotly contended), that
+//    might be improved by having per-worker queues with work stealing
+//    or some sort of batch refilling.  It should not matter too much
+//    if the grain is "right" (see previous item) but it would be
+//    useful to know.
 
 "use strict";
 
@@ -207,7 +214,7 @@ function _Multicore_comm(doneCallback, fnIdent, outputMem, indexSpace, args) {
     const itmp = new Int32Array(tmp);
     const ftmp = new Float64Array(tmp);
 
-    // Broadcast?
+    // Broadcast
     if (outputMem === null)
 	outputMem = _Multicore_mem.buffer;
     if (!_Multicore_barrier.isQuiescent())
@@ -215,7 +222,7 @@ function _Multicore_comm(doneCallback, fnIdent, outputMem, indexSpace, args) {
     var items;
     switch (indexSpace.length) {
     case 0:
-	// Broadcast?
+	// Broadcast
 	items = [];
 	break;
     case 1:
