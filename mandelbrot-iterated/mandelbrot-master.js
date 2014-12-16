@@ -24,7 +24,7 @@ function showMandelbrot() {
     var display = animate;
     if (iterations == 0)
 	timeBefore = Date.now();
-    if (iterations < maxIterations) {
+    if (animate && iterations < maxIterations) {
 	iterations++;
 	magnification *= magFactor;
 	mem = (memnow == mem1) ? mem2 : mem1;

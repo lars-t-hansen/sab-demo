@@ -1,6 +1,6 @@
-// Data-parallel framework on shared memory: Multicore.build()
+// Data-parallel framework on shared memory: Multicore.build() and friends.
 // Worker side.
-// lhansen@mozilla.com / 8 December 2014
+// lhansen@mozilla.com / 16 December 2014
 
 // REQUIRE:
 //   asymmetric-barrier.js
@@ -23,7 +23,11 @@
 
 "use strict";
 
-const Multicore = {};
+const Multicore =
+    {
+	addFunction: _Multicore_addFunction,
+	msg: _Multicore_msg
+    };
 
 // Register a worker function.
 //
@@ -35,17 +39,17 @@ const Multicore = {};
 //
 // Returns nothing.
 
-Multicore.addFunction =
-    function (name, func) {
-	_Multicore_functions[name] = func;
-    };
+function _Multicore_addFunction(name, func) {
+    _Multicore_functions[name] = func;
+}
 
 // Print a message on the console.
 
-Multicore.msg =
-    function (msg) {
-	postMessage(String(msg));
-    };
+function _Multicore_msg(msg) {
+    postMessage(String(msg));
+}
+
+// PRIVATE.
 
 var _Multicore_mem = null;
 var _Multicore_barrier = null;
@@ -58,6 +62,9 @@ var _Multicore_argLimLoc = 0;
 var _Multicore_sab = null;
 var _Multicore_knownSAB = [null];	// Direct map from ID to SAB
 var _Multicore_functions = {};
+var _Multicore_global = this;
+
+Multicore.addFunction("_Multicore_eval", _Multicore_eval);
 
 onmessage =
     function (ev) {
@@ -96,6 +103,7 @@ function _Multicore_messageLoop() {
     const ARG_BOOL = 5;
     const ARG_UNDEF = 6;
     const ARG_NULL = 7;
+    const ARG_STRING = 8;
 
     const TAG_SAB = 1;
     const TAG_I8 = 2;
@@ -223,6 +231,24 @@ function _Multicore_messageLoop() {
 	    return undefined;
 	case ARG_NULL:
 	    return null;
+	case ARG_STRING:
+	    var len = (tag >>> 8);
+	    var i = 0;
+	    var s = "";
+	    while (i < len) {
+		var w = M[nextArg++];
+		s += String.fromCharCode(w & 0xFFFF);
+		i++;
+		if (i < len) {
+		    s += String.fromCharCode(w >>> 16);
+		    i++;
+		}
+	    }
+	    return s;
 	}
     }
+}
+
+function _Multicore_eval(program) {
+    _Multicore_global.eval(program);
 }

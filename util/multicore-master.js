@@ -1,6 +1,6 @@
 // Data-parallel framework on shared memory: Multicore.build()
 // Master side.
-// lhansen@mozilla.com / 9 December 2014
+// lhansen@mozilla.com / 16 December 2014
 
 // REQUIRE:
 //   asymmetric-barrier.js
@@ -16,6 +16,9 @@
 //
 // Call Multicore.broadcast() to invoke a function on all workers, eg
 // to precompute intermediate data or distribute invariant parameters.
+//
+// Call Multicore.eval() to eval a program in each worker, ie, to
+// broadcast program code or precomputations.
 //
 // TODO:
 //  - Currently only one build or broadcast can be outstanding at one
@@ -54,7 +57,8 @@ const Multicore =
     {
 	init: _Multicore_init,
 	build: _Multicore_build,
-	broadcast: _Multicore_broadcast
+	broadcast: _Multicore_broadcast,
+	eval: _Multicore_eval
     };
 
 var _Multicore_workers = [];
@@ -139,6 +143,9 @@ function _Multicore_init(numWorkers, workerScript, readyCallback) {
 
 // Multicore.build()
 //
+// Invoke a function in parallel on sections of an index space,
+// producing output into a predefined shared memory array.
+//
 // doneCallback is a function, it will be invoked in the master once
 //   the work is finished.
 // fnIdent is the string identifier of the remote function to invoke.
@@ -153,10 +160,10 @@ function _Multicore_init(numWorkers, workerScript, readyCallback) {
 //   bool, undefined, or null values and will be marshalled and passed
 //   as arguments to the user function on the worker side.
 //
-// You can call this function repeatedly, but only one call to build
-// or broadcast can be outstanding: only when the doneCallback has
-// been invoked can Multicore.build or Multicore.broadcast be called
-// again.
+// You can call this function repeatedly, but only one call to build,
+// broadcast, or eval can be outstanding: only when the doneCallback
+// has been invoked can Multicore.build, Multicore.broadcast, or
+// Multicore.eval be called again.
 
 function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args) {
     if (!Array.isArray(indexSpace) || indexSpace.length < 1)
@@ -172,6 +179,8 @@ function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args)
 
 // Multicore.broadcast()
 //
+// Invoke a function once on each worker.
+//
 // doneCallback is a function, it will be invoked in the master once
 //   the work is finished.
 // fnIdent is the string identifier of the remote function to invoke.
@@ -180,13 +189,25 @@ function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args)
 //   and will be marshalled and passed as arguments to the user
 //   function on the worker side.
 //
-// You can call this function repeatedly, but only one call to build
-// or broadcast can be outstanding: only when the doneCallback has
-// been invoked can Multicore.build or Multicore.broadcast be called
-// again.
+// See note about serialization on Multicore.build().
 
 function _Multicore_broadcast(doneCallback, fnIdent, ...args) {
     return _Multicore_comm(doneCallback, fnIdent, null, [], args);
+}
+
+// Multicore.eval()
+//
+// Evaluate a program once on each worker.
+//
+// doneCallback is a function, it will be invoked in the master once
+//   the work is finished.
+// program is textual program code, to be evaluated in the global
+//   scope of the worker.
+//
+// See note about serialization on Multicore.build().
+
+function _Multicore_eval(doneCallback, program) {
+    _Multicore_broadcast(doneCallback, "_Multicore_eval", program);
 }
 
 function _Multicore_comm(doneCallback, fnIdent, outputMem, indexSpace, args) {
@@ -199,6 +220,7 @@ function _Multicore_comm(doneCallback, fnIdent, outputMem, indexSpace, args) {
     const ARG_BOOL = 5;
     const ARG_UNDEF = 6;
     const ARG_NULL = 7;
+    const ARG_STRING = 8;
 
     const TAG_SAB = 1;
     const TAG_I8 = 2;
@@ -379,6 +401,21 @@ function _Multicore_comm(doneCallback, fnIdent, outputMem, indexSpace, args) {
 		return;
 	    }
 
+	    if (typeof v == 'string') {
+		if (v.length >= 0x1000000)
+		    throw new Error("String too long to be marshalled");
+		argValues.push(ARG_STRING | (v.length << 8));
+		var i = 0;
+		while (i < v.length) {
+		    var k = v.charCodeAt(i++);
+		    if (i < v.length)
+			k |= (v.charCodeAt(i++) << 16);
+		    argValues.push(k);
+		}
+		++vno;
+		return;
+	    }
+
 	    if (v instanceof SharedArrayBuffer) {
 		argValues.push(ARG_SAB);
 		argValues.push(registerSab(v));
@@ -472,10 +509,13 @@ private working memory.
 
   the M[A] is a tag: int, float, bool, null, undefined, sab, or sta
   if tag==null or tag==undefined then there's no data
-  if tag==bool then the eight bit of the tag is 1 or 0
+  if tag==bool then the eighth bit of the tag is 1 or 0
   if tag==int, then the int follows immediately
   if tag==float, there may be padding and then the float follows immediately
     in native word order
+  if tag==string, the high 24 bits of the tag are the strings length,
+    and the following ceil(length/2) words are characters, in order,
+    packed (hi << 16)|lo to each word
   if tag==sab, then there is one argument word:
     - sab identifier
   if tag==sta, then the tag identifies the array type, and there are
