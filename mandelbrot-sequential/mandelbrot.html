@@ -1,0 +1,22 @@
+<canvas id=mycanvas></canvas>
+<script src="../util/canvas.js"></script>
+<script src="mandelbrot.js"></script>
+<script>
+var ITER = 10;
+var result;
+var times = [];
+
+var timeBefore = Date.now();
+for ( var i=0 ; i < ITER ; i++ ) {
+   var t0 = Date.now();
+   result = doMandelbrot();
+   times.push(Date.now() - t0);
+}
+
+console.log("Average compute time: " + (Date.now() - timeBefore) / ITER + "ms");
+console.log(times.join(","));
+canvasSetFromABGRBytes(document.getElementById("mycanvas"),
+		       new Uint8Array(result.buffer, 0, height*width*4),
+		       height,
+		       width);
+</script>
