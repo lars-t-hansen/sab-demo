@@ -1,3 +1,6 @@
+// This illustrates the use of Multicore.eval and blob URLs to keep
+// all the code within one program.
+
 // Center the image at this location.
 const g_center_x = -0.743643887037158704752191506114774;
 const g_center_y = 0.131825904205311970493132056385139;
@@ -9,14 +12,21 @@ const width = 640;
 // Animation control.
 const magFactor = 1.05;
 const maxIterations = 250;
-const animate = true;
+const animate = false;
 
-// I would have liked for the empty worker to be a data: URL, but in
-// that case importScripts becomes illegal.
+// It's a little bit involved to construct a literal script that will
+// pass the security checks.  For more, see 
+// http://www.html5rocks.com/en/tutorials/workers/basics/
+
+var myloc = String(document.location);
+var baseloc = myloc.substring(0,myloc.lastIndexOf("/"));
+var blob = new Blob([`importScripts('${baseloc}/../util/asymmetric-barrier.js','${baseloc}/../util/multicore-worker.js')`]);
+var blobUrl = URL.createObjectURL(blob);
 
 Multicore.init(numWorkers,
-	       "mandelbrot-empty-worker.js",
+	       blobUrl,
 	       function () {
+		   URL.revokeObjectURL(blobUrl);
 		   Multicore.eval(doMandelbrot, worker_code);
 	       });
 

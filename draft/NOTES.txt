@@ -54,128 +54,45 @@ synchronously.
 
 --------------------
 
-Here's an idea for Multicore (not quite baked, and unpalatable because
-nobody is fond of shipping source code).
+A simple generalization allows literal code to be used as the argument
+for Multicore.build:
 
-These are easily defined in user code though, define is just a
-broadcast and the build/broadcast variants just call user functions
-that take the source as the first argument, say.
+// source must evaluate (on the worker) to a function value, and will
+// be invoked directly.
 
-// source must evaluate *in the worker* to a function value (why only function?),
-// and name is defined in the global env with that value.  Specifically source will be
-// evaluated as the operand of a return statement within a global function that
-// binds only one argument, ___source___, which is the source string itself.
-// (Obviously this is a minor security concern since the evaluation can grab
-// variables in the environment.)
+Multicore.buildFn(k, source, ...) 
 
-Multicore.define(k, name, source)
+// ditto for broadcast:
 
-// source must evaluate to a function value, and will be invoked directly.
-// eval as for define().  The meaning of multicore.fn is simply to mark
-// the string as something other than the name of a function.
+Multicore.broadcastFn(k, source, ...)
 
-Multicore.build(k, Multicore.fn(source), ...) 
+These could use a custom protocol or could just broadcast the code
+with eval under a hidden name before the build.  There could be
+caching to avoid rebroadcast, though only if the source is literally a
+function expression, not something that computes a function value in
+some complicated way that may contain local state.  For example,
+consider this:
 
-// ditto
+Multicore.buildFn(k, "(function () { var sum=0; return function (mem, lo, hi) { for ( var i=lo ; i < hi ; i++ ) { sum += mem[i]; mem[i] = sum; } } })()", ...);
 
-Multicore.broadcast(k, Multicore.fn(source), ...)
+Indeed should the expression be reevaluated for every slice?  That
+does not seem reasonable.
 
+--------------------
 
-The following are nice to have but even less essential:
-
-// this creates an empty worker - it has the multicore lib but no user code
-
-Multicore.init(n, Multicore.emptyWorker(url_of_util_directory), k)
+It would be nice to be able to use data: URLs as arguments to new
+Worker, and that works for simple ones but not for one containing
+importScripts.  It appears to be a cross-origin problem.  See
+http://www.html5rocks.com/en/tutorials/workers/basics/ and search for
+"Blob URLs", which are similar to data urls and have similar issues.
 
 // Create an empty worker.  Effectively this should evaluate to
-// "data:importScripts('DIR/asymmetric-barrier.js','DIR/parinvoke-worker.js')",
-// assuming that's even allowed
+// "data:application/javascript,importScripts('DIR/asymmetric-barrier.js','DIR/parinvoke-worker.js')",
 
-Multicore.emptyWorker(url_of_util_directory)
+This appears to be the way to do it:
 
+var me = String(document.location);
+var blob = new Blob(["importScripts('" + me.substring(0,me.lastIndexOf("/")+1) + "dataurl-extern.js')"]);
+var blobUrl = URL.createObjectURL(blob);
+Multicore.init(1, blobUrl, function () { URL.releaseObjectURL(blobUrl); ... });
 
-
-// In parinvoke-master-aux.js:
-
-Multicore.build =
-  (function (build) {
-    function IsFunctionSource(x) {
-      return Array.isArray(x) && x.length == 2 && x[0] === "FunctionSource" && x[1] instanceof String;
-    }
-    function FunctionSourceToString(x) { return x[1] }
-    function b(k, fn, out, indexSpace, ...args) {
-       if (IsFunctionSource(fn))
-         build.apply(Multicore, args.unshift(k, "evalAndRun", out, indexSpace, FunctionSourceToString(fn)));
-       else
-         build.apply(Multicore, args.unshift(k, fn, out, indexSpace));
-    }
-    return b;
-  })(Multicore.build);
-
-Multicore.fn =
-  function (s) {
-    return ["FunctionSource", String(s)];
-  };
-
-
-// In parinvoke-worker-aux.js:
-
-// A little tricky because the output mem and indices will precede the string!
-// So we must pass an arg saying how long the index space is.  But we can't
-// find that argument without knowing how long the index space is.  So we can
-// pass an argument that says how many arguments there are.  That argument would
-// have to be the last one.
-//
-// The alternative is to provide a buildWithArgs method that takes the args packaged,
-// for example, to enable usages like this.
-
-Multicore.addFunction("evalAndRun", function ( ...rest) {
- ...
-});
-
-// Do we have something that performs a global eval now?  Could we use new Function?
-function __evalInGlobal(___source___) {
-    return eval(___source___);
-}
-
-
-------------------------------------------------------------
-
-More interesting:  global.eval(s) just evals the program s in the global environment.
-So why not something like this for general use:
-
-Multicore.broadcast("define",
-```
-var x=10
-var y=20
-function fib(n) {
-  if (n < 2) return n;
-  return n;
-}
-```)
-
-where
-
-var __global__ = this;
-Multicore.addFunction("define",
-	function (prog) {
-	    try {
-                __global__.eval(prog);
-            }
-            catch (exn) {
-                try {
-                    var s = String(exn);
-                    Multicore.msg(s);
-                }
-                catch(exn2) {
-                    Multicore.msg("Error in define");
-                }
-            }
-        });
-
-
-We could package this as follows:
-
-
-Multicore.eval =
-    function (prog) { Multicore.broadcast("define", prog) };
