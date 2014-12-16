@@ -1,4 +1,4 @@
-// Data-parallel framework on shared memory: Multicore.build()
+// Data-parallel framework on shared memory: Multicore.build() and friends.
 // Master side.
 // lhansen@mozilla.com / 16 December 2014
 
@@ -17,13 +17,13 @@
 // Call Multicore.broadcast() to invoke a function on all workers, eg
 // to precompute intermediate data or distribute invariant parameters.
 //
-// Call Multicore.eval() to eval a program in each worker, ie, to
+// Call Multicore.eval() to eval a program in each worker, eg to
 // broadcast program code or precomputations.
 //
 // TODO:
-//  - Currently only one build or broadcast can be outstanding at one
-//    time.  That's not a huge hardship but it's easy to see that the
-//    master might want to create a queue of builds and broadcasts and
+//  - Currently only one build, broadcast, or eval can be outstanding
+//    at one time.  That's not a huge hardship but it's easy to see
+//    that the master might want to create a queue of operations and
 //    receive a callback once they're all done.  There would probably
 //    be an efficiency win if we could avoid the trip through the
 //    master by using worker-only barriers between the stages in such
@@ -31,13 +31,14 @@
 //
 //  - Nested parallelism is desirable, ie, a worker should be allowed
 //    to invoke Multicore.build, suspending until that subcomputation
-//    is done.
+//    is done.  (Broadcast and eval are less obvious.)
 //
 //  - More data types should be supported for transmission in build()
-//    and broadcast(): float32, simd types, strings; also plain
-//    objects, arrays, and typedarrays would be very helpful, at least
-//    for small non-self-referential objects; we could have an
-//    arbitrary cutoff (bleah) or a warning for large ones.
+//    and broadcast(): float32, simd types; also plain objects,
+//    arrays, and typedarrays would be very helpful, at least for
+//    small non-self-referential objects; we could have an arbitrary
+//    cutoff (bleah) or a warning for large ones, and an error for
+//    circular ones.
 //
 //  - The original conception of Multicore.build allowed the index
 //    space to contain hints to aid load balancing.  It would be
@@ -157,13 +158,21 @@ function _Multicore_init(numWorkers, workerScript, readyCallback) {
 //   space of the computation; workers will be invoked on subvolumes
 //   of this space in an unpredictable order.
 // The ...args can be SharedTypedArray, SharedArrayBuffer, number,
-//   bool, undefined, or null values and will be marshalled and passed
-//   as arguments to the user function on the worker side.
+//   bool, string, undefined, or null values and will be marshalled
+//   and passed as arguments to the user function on the worker side.
 //
-// You can call this function repeatedly, but only one call to build,
-// broadcast, or eval can be outstanding: only when the doneCallback
-// has been invoked can Multicore.build, Multicore.broadcast, or
-// Multicore.eval be called again.
+// The handler function identified by fnIdent will be invoked on the
+// following arguments, in order:
+//   outpuMem
+//   base and limit values for each element in indexSet, in order
+//   any additional ...args
+// Thus if the length of indexSet is three and there are four
+// additional arguments then the number of arguments is 1+2*3+4.
+//
+// Serialization of calls: You can call this function repeatedly, but
+// only one call to build, broadcast, or eval can be outstanding: only
+// when the doneCallback has been invoked can build, broadcast, or
+// eval be called again.
 
 function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args) {
     if (!Array.isArray(indexSpace) || indexSpace.length < 1)
@@ -189,7 +198,10 @@ function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args)
 //   and will be marshalled and passed as arguments to the user
 //   function on the worker side.
 //
-// See note about serialization on Multicore.build().
+// The handler function identified by fnIdent will be invoked on the
+// ...args only, no other arguments are passed.
+//
+// See note about serialization of calls on Multicore.build().
 
 function _Multicore_broadcast(doneCallback, fnIdent, ...args) {
     return _Multicore_comm(doneCallback, fnIdent, null, [], args);
@@ -204,7 +216,7 @@ function _Multicore_broadcast(doneCallback, fnIdent, ...args) {
 // program is textual program code, to be evaluated in the global
 //   scope of the worker.
 //
-// See note about serialization on Multicore.build().
+// See note about serialization of calls on Multicore.build().
 
 function _Multicore_eval(doneCallback, program) {
     _Multicore_broadcast(doneCallback, "_Multicore_eval", program);
@@ -513,7 +525,7 @@ private working memory.
   if tag==int, then the int follows immediately
   if tag==float, there may be padding and then the float follows immediately
     in native word order
-  if tag==string, the high 24 bits of the tag are the strings length,
+  if tag==string, the high 24 bits of the tag are the string's length,
     and the following ceil(length/2) words are characters, in order,
     packed (hi << 16)|lo to each word
   if tag==sab, then there is one argument word:
