@@ -12,11 +12,12 @@ const width = 640;
 // Animation control.
 const magFactor = 1.05;
 const maxIterations = 250;
-const animate = false;
+const animate = true;
 
 // It's a little bit involved to construct a literal script that will
 // pass the security checks.  For more, see 
-// http://www.html5rocks.com/en/tutorials/workers/basics/
+// http://www.html5rocks.com/en/tutorials/workers/basics/, and search
+// for "blob urls".
 
 var myloc = String(document.location);
 var baseloc = myloc.substring(0,myloc.lastIndexOf("/"));
