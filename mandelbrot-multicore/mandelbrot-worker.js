@@ -1,4 +1,4 @@
-importScripts("../util/barrier.js",
+importScripts("../util/asymmetric-barrier.js",
 	      "../util/multicore-worker.js",
 	      "mandelbrot-parameters.js");
 

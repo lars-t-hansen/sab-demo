@@ -1,0 +1,181 @@
+Sundry observations about concurrency abstractions.
+
+Probably the Multicore system could build on a task channel
+abstraction: right now it has a custom channel of fixed capacity and
+can't handle a larger number of work items than that.  As a result it
+overallocates memory for itself.  That can be fixed, even within the
+current system, by allocating smaller metadata chunks and just
+distributing more chunks on demand.
+
+A task channel (a la GCD) would take work items, which are just
+bundles of function ID + parameters, and queue them up for execution
+on some suitable worker.  Part of the problem with that is that not
+all workers are suitable (because they haven't loaded the program).
+So there is probably some notion of a pool of workers tied to a queue,
+and tasks on that queue.
+
+-------------------- 
+
+For handwritten-JS the main use case is certainly as a computation
+engine to offload the main thread and also to exploit multicore.
+
+Usability of the low-level features can be improved by:
+
+- higher-level abstractions (data-parallel and task-parallel) that are
+  largely deadlock-free because they use locks in extremely structured
+  ways or not at all; of course it's never quite that simple but
+  it indisputably helps.
+
+- code generation from a higher-level language, to take some of the
+  drudgery out of it, though it more or less amounts to the same thing
+  as a high-level language
+
+- low-level toolable abstractions (actual locks with hooks into the
+  tools) /or/ some form of instrumentation that allows tools to help
+
+--------------------
+
+Consider futexWait.  What does "deadlock" mean?  It means that there
+is a clique of workers (incl the main thread) that are waiting on each
+other.  Even including the main thread is a problem because any event
+can make it runnable.  And if the main thread is runnable it can
+perform a futexWake to wake any waiting thread.  So a deadlock is
+really something else (or there are no deadlocks, only livelocks).
+
+--------------------
+
+A task queue is a data structure where tasks can be inserted by both
+master and workers and where the master runs some code to distribute
+tasks to workers.
+
+GCD can wait on task groups, which are always async (and thus it waits
+for completion of all the tasks in the group), or it can execute tasks
+synchronously.
+
+--------------------
+
+Here's an idea for Multicore (not quite baked, and unpalatable because
+nobody is fond of shipping source code).
+
+These are easily defined in user code though, define is just a
+broadcast and the build/broadcast variants just call user functions
+that take the source as the first argument, say.
+
+// source must evaluate *in the worker* to a function value (why only function?),
+// and name is defined in the global env with that value.  Specifically source will be
+// evaluated as the operand of a return statement within a global function that
+// binds only one argument, ___source___, which is the source string itself.
+// (Obviously this is a minor security concern since the evaluation can grab
+// variables in the environment.)
+
+Multicore.define(k, name, source)
+
+// source must evaluate to a function value, and will be invoked directly.
+// eval as for define().  The meaning of multicore.fn is simply to mark
+// the string as something other than the name of a function.
+
+Multicore.build(k, Multicore.fn(source), ...) 
+
+// ditto
+
+Multicore.broadcast(k, Multicore.fn(source), ...)
+
+
+The following are nice to have but even less essential:
+
+// this creates an empty worker - it has the multicore lib but no user code
+
+Multicore.init(n, Multicore.emptyWorker(url_of_util_directory), k)
+
+// Create an empty worker.  Effectively this should evaluate to
+// "data:importScripts('DIR/asymmetric-barrier.js','DIR/parinvoke-worker.js')",
+// assuming that's even allowed
+
+Multicore.emptyWorker(url_of_util_directory)
+
+
+
+// In parinvoke-master-aux.js:
+
+Multicore.build =
+  (function (build) {
+    function IsFunctionSource(x) {
+      return Array.isArray(x) && x.length == 2 && x[0] === "FunctionSource" && x[1] instanceof String;
+    }
+    function FunctionSourceToString(x) { return x[1] }
+    function b(k, fn, out, indexSpace, ...args) {
+       if (IsFunctionSource(fn))
+         build.apply(Multicore, args.unshift(k, "evalAndRun", out, indexSpace, FunctionSourceToString(fn)));
+       else
+         build.apply(Multicore, args.unshift(k, fn, out, indexSpace));
+    }
+    return b;
+  })(Multicore.build);
+
+Multicore.fn =
+  function (s) {
+    return ["FunctionSource", String(s)];
+  };
+
+
+// In parinvoke-worker-aux.js:
+
+// A little tricky because the output mem and indices will precede the string!
+// So we must pass an arg saying how long the index space is.  But we can't
+// find that argument without knowing how long the index space is.  So we can
+// pass an argument that says how many arguments there are.  That argument would
+// have to be the last one.
+//
+// The alternative is to provide a buildWithArgs method that takes the args packaged,
+// for example, to enable usages like this.
+
+Multicore.addFunction("evalAndRun", function ( ...rest) {
+ ...
+});
+
+// Do we have something that performs a global eval now?  Could we use new Function?
+function __evalInGlobal(___source___) {
+    return eval(___source___);
+}
+
+
+------------------------------------------------------------
+
+More interesting:  global.eval(s) just evals the program s in the global environment.
+So why not something like this for general use:
+
+Multicore.broadcast("define",
+```
+var x=10
+var y=20
+function fib(n) {
+  if (n < 2) return n;
+  return n;
+}
+```)
+
+where
+
+var __global__ = this;
+Multicore.addFunction("define",
+	function (prog) {
+	    try {
+                __global__.eval(prog);
+            }
+            catch (exn) {
+                try {
+                    var s = String(exn);
+                    Multicore.msg(s);
+                }
+                catch(exn2) {
+                    Multicore.msg("Error in define");
+                }
+            }
+        });
+
+
+We could package this as follows:
+
+
+Multicore.eval =
+    function (prog) { Multicore.broadcast("define", prog) };

@@ -9,6 +9,7 @@ making use of:
   - we can update shared memory, so there's no need for the difficult
     post-render loop, we can just blit the data from one to the other
     if we set things up properly
+
   - we can overlap display of one frame with the computation of the
     next frame
 

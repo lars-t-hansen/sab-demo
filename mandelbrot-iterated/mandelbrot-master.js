@@ -1,12 +1,14 @@
-const numWorkers = 4;
-const maxIterations = 120;
+// numWorkers is defined by the html document, for convenience.
+//const numWorkers = ...;
+const magFactor = 1.05;
+const maxIterations = 250;
 const animate = true;
 
 Multicore.init(numWorkers, "mandelbrot-worker.js", doMandelbrot);
 
 const rawmem = new SharedArrayBuffer(height*width*4*2);
 const mem1 = new SharedInt32Array(rawmem, 0, height*width);
-const mem2 = new SharedInt32Array(rawmem, height*width, height*width);
+const mem2 = new SharedInt32Array(rawmem, height*width*4, height*width);
 
 var magnification = 1;
 var iterations = 0;
@@ -24,13 +26,16 @@ function showMandelbrot() {
 	timeBefore = Date.now();
     if (iterations < maxIterations) {
 	iterations++;
-	magnification *= 1.1;
+	magnification *= magFactor;
 	mem = (memnow == mem1) ? mem2 : mem1;
+	// Overlap display of this frame with computation of the next.
 	doMandelbrot();
     }
     else {
 	var t = Date.now() - timeBefore;
-	console.log("Number of workers: " + numWorkers + "  Compute time: " + t + "ms  FPS=" + (iterations/(t/1000)));
+	var fps = Math.round((iterations/(t/1000))*10)/10;
+	console.log("Number of workers: " + numWorkers + "  Compute time: " + t + "ms  FPS=" + fps);
+	document.getElementById('caption').innerHTML += '; FPS=' + fps;
 	display = true;
     }
     if (display) 

@@ -1,9 +1,14 @@
-// 24 November 2014 / lhansen@mozilla.com
+// Data-parallel framework on shared memory: Multicore.build()
+// Worker side.
+// lhansen@mozilla.com / 8 December 2014
+
+// REQUIRE:
+//   asymmetric-barrier.js
 
 // A simple data-parallel framework that maintains a worker pool and
 // invokes computations in parallel on shared memory.
 //
-// Load this into your worker code, after loading barrier.js.
+// Load this into your worker code, after loading asymmetric-barrier.js.
 //
 // Call Multicore.addFunction() to register functions with the
 // framework.  The functions will be invoked when work orders are
@@ -15,6 +20,8 @@
 //
 // Call Multicore.msg() to send a message to the console, via the
 // master.
+
+"use strict";
 
 const Multicore = {};
 
@@ -49,7 +56,7 @@ var _Multicore_limLoc = 0;
 var _Multicore_nextArgLoc = 0;
 var _Multicore_argLimLoc = 0;
 var _Multicore_sab = null;
-var _Multicore_knownSAB = [];	// Direct map from ID to SAB
+var _Multicore_knownSAB = [null];	// Direct map from ID to SAB
 var _Multicore_functions = {};
 
 onmessage =
@@ -65,6 +72,7 @@ onmessage =
 	    _Multicore_limLoc = limLoc;
 	    _Multicore_nextArgLoc = nextArgLoc;
 	    _Multicore_argLimLoc = argLimLoc;
+	    _Multicore_knownSAB[0] = sab;
 	    _Multicore_messageLoop();
 	    break;
 
@@ -84,7 +92,10 @@ function _Multicore_messageLoop() {
     const ARG_INT = 1;
     const ARG_FLOAT = 2;
     const ARG_SAB = 3;
-    const ARG_ARRAY = 4;
+    const ARG_STA = 4;
+    const ARG_BOOL = 5;
+    const ARG_UNDEF = 6;
+    const ARG_NULL = 7;
 
     const TAG_SAB = 1;
     const TAG_I8 = 2;
@@ -124,6 +135,14 @@ function _Multicore_messageLoop() {
 	var fn = _Multicore_functions[id];
 	if (!fn)
 	    throw new Error("No function installed for ID '" + id + "'");
+
+	// Passing the private memory as the output buffer is a special signal.
+	if (userMem == _Multicore_mem.buffer) {
+	    // Broadcast.  Do not expect any work items, just invoke the function and
+	    // reenter the barrier.
+	    fn.apply(null, args);
+	    continue;
+	}
 
 	// Can specialize the loop for different values of args.length
 	if (args.length > 0) {
@@ -182,7 +201,7 @@ function _Multicore_messageLoop() {
 	    return ftmp[0];
 	case ARG_SAB:
 	    return _Multicore_knownSAB[M[nextArg++]];
-	case ARG_ARRAY:
+	case ARG_STA:
 	    var sab = _Multicore_knownSAB[M[nextArg++]];
 	    var byteOffset = M[nextArg++];
 	    var length = M[nextArg++];
@@ -198,6 +217,12 @@ function _Multicore_messageLoop() {
 	    case TAG_F64: return new SharedFloat64Array(sab, byteOffset, length);
 	    default: throw new Error("Bad array typetag: " + tag.toString(16));
 	    }
+	case ARG_BOOL:
+	    return !!(tag >> 8);
+	case ARG_UNDEF:
+	    return undefined;
+	case ARG_NULL:
+	    return null;
 	}
     }
 }

@@ -1,11 +1,23 @@
-importScripts("../util/asymmetric-barrier.js",
-	      "../util/multicore-worker.js",
-	      "mandelbrot-parameters.js");
+// Center the image at this location.
+const g_center_x = -0.743643887037158704752191506114774;
+const g_center_y = 0.131825904205311970493132056385139;
 
-Multicore.addFunction("mandelbrot", mandelbrot);
+// Pixel grid.  (0,0) correspons to (bottom,left)
+const height = 480;
+const width = 640;
+
+// Set this to larger values to zoom in on the center.
+const magnification = 100;
+
+const mem = new Int32Array(height*width);
+
+function doMandelbrot() {
+    mandelbrot(mem, 0, height, 0, width, magnification);
+    return mem;
+}
 
 // Maximum iterations per pixel.
-const MAXIT = 200;
+const MAXIT = 1000;
 
 // Colors are ABGR with A=255.
 const colors = [0xFFFF0700, 0xFF2a2aa5, 0xFFFFff00, 0xFFa19eff,

@@ -49,7 +49,7 @@ var World = function() {
     this.map = new SharedFloat32Array(64 * 64 * 64);
     this.texmap = new SharedFloat32Array(16 * 16 * 3 * 16);
     this.frames = 0;
-    this.resultArray = null;	// Will be initialized if needed
+    this.sharedResultArray = null;	// Will be initialized if needed
 
     this.ctx = document.getElementById('game').getContext('2d');
     wself = this;
@@ -79,9 +79,15 @@ World.prototype.toggleExecutionMode = function () {
     switch(this.MODE) {
     case "pjs":
         this.MODE = "workers";
-	if (this.resultArray == null) {
-	    this.resultArray = new SharedInt32Array(this.w*this.h);
-	    Multicore.init(numWorkers, "renderWorld-worker.js", () => { READY=true });
+	if (this.sharedResultArray == null) {
+	    this.sharedResultArray = new SharedInt32Array(this.w*this.h);
+	    Multicore.init(numWorkers,
+			   "renderWorld-worker.js",
+			   () => {
+			       Multicore.broadcast(() => { READY=true; },
+						   "Setup",
+						   this.w, this.h, this.map, this.texmap);
+			   });
 	}
         document.getElementById("togglebutton").innerHTML = "Go Sequential";
 	break;
@@ -318,10 +324,9 @@ World.prototype.renderWorldWorkers = function(k) {
     if (!READY)
 	return false;
     this.updateTickParams();
-    this.result = this.resultArray;
-    Multicore.build(k, "MineKernel", this.resultArray, [[0,this.w*this.h]],
-		    this.w, this.h, this.map, this.texmap, this.yCos, this.ySin, this.xCos, this.xSin,
-		    this.ox, this.oy, this.oz);
+    Multicore.build(k, "MineKernel", this.sharedResultArray, [[0,this.w*this.h]],
+		    this.yCos, this.ySin, this.xCos, this.xSin, this.ox, this.oy, this.oz);
+    this.result = this.sharedResultArray;
     return true;
 }
 

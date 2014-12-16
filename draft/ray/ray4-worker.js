@@ -3,7 +3,7 @@
 //
 // lth@acm.org / lhansen@mozilla.com, winter 2012 and later.
 
-importScripts("../util/barrier.js");
+importScripts("../util/asymmetric-barrier.js");
 importScripts("ray4-common.js");
 
 const SENTINEL = 1e32;

@@ -1,8 +1,13 @@
 <html>
 <body>
+<script>
+var param = String(document.location).match(/cores=(\d+)/);
+const numWorkers = param ? parseInt(param[1]) : 8;
+document.write("<div id='caption' style='font-size: large'>Number of workers: " + numWorkers + "</div><div>&nbsp</div>");
+</script>
 <canvas id=mycanvas></canvas>
 <script src="../util/canvas.js"></script>
-<script src="../util/barrier.js"></script>
+<script src="../util/asymmetric-barrier.js"></script>
 <script src="../util/multicore-master.js"></script>
 <script src="mandelbrot-parameters.js"></script>
 <script src="mandelbrot-master.js"></script>

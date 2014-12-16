@@ -1,31 +1,60 @@
-// 24 November 2014 / lhansen@mozilla.com
+// Data-parallel framework on shared memory: Multicore.build()
+// Master side.
+// lhansen@mozilla.com / 9 December 2014
+
+// REQUIRE:
+//   asymmetric-barrier.js
 
 // A simple data-parallel framework that maintains a worker pool and
 // invokes computations in parallel on shared memory.
 //
-// Load this into your main program, after loading barrier.js.
+// Load this into your main program, after loading asymmetric-barrier.js.
 //
 // Call Multicore.init() to set things up, once.
 //
 // Call Multicore.build() to distribute and perform computation.
 //
-// TODO
-// Things we want are:
-//  - Multicore.broadcast(), invoke a function on each worker, 
-//    usually to distribute or precompute data.
+// Call Multicore.broadcast() to invoke a function on all workers, eg
+// to precompute intermediate data or distribute invariant parameters.
 //
-//  - The ability to pipeline multiple requests, in order to
-//    get better utilization.
+// TODO:
+//  - Currently only one build or broadcast can be outstanding at one
+//    time.  That's not a huge hardship but it's easy to see that the
+//    master might want to create a queue of builds and broadcasts and
+//    receive a callback once they're all done.  There would probably
+//    be an efficiency win if we could avoid the trip through the
+//    master by using worker-only barriers between the stages in such
+//    a pipeline.
 //
-//  - Pass more kinds of data as parameters to Multicore.build(),
-//    notably strings, booleans, undefined, simd data, and float32;
-//    also it would not be totally unreasonable to pass "small"
-//    objects and arrays by copy.
+//  - Nested parallelism is desirable, ie, a worker should be allowed
+//    to invoke Multicore.build, suspending until that subcomputation
+//    is done.
+//
+//  - More data types should be supported for transmission in build()
+//    and broadcast(): float32, simd types, strings; also plain
+//    objects, arrays, and typedarrays would be very helpful, at least
+//    for small non-self-referential objects; we could have an
+//    arbitrary cutoff (bleah) or a warning for large ones.
+//
+//  - The original conception of Multicore.build allowed the index
+//    space to contain hints to aid load balancing.  It would be
+//    useful to import that idea, probably, or at least experiment
+//    with it to see if it really affects performance.
+//
+//  - There is unnecessary lock overhead in having the single work
+//    queue (the pointer for the next item is hotly contended), that
+//    might be improved by having per-worker queues with work stealing
+//    or some sort of batch refilling.  It should not matter too much
+//    if the grain is "right" (see previous item) but it would be
+//    useful to know.
+
+"use strict";
 
 const Multicore =
     {
 	init: _Multicore_init,
-	build: _Multicore_build
+	build: _Multicore_build,
+	broadcast: _Multicore_broadcast
     };
 
 var _Multicore_workers = [];
@@ -41,7 +70,7 @@ var _Multicore_nextLoc = 0;
 var _Multicore_limLoc = 0;
 var _Multicore_nextArgLoc = 0;
 var _Multicore_argLimLoc = 0;
-var _Multicore_knownSAB = [];
+var _Multicore_knownSAB = [null];
 
 // Multicore.init()
 //
@@ -70,6 +99,7 @@ function _Multicore_init(numWorkers, workerScript, readyCallback) {
     _Multicore_nextArgLoc = _Multicore_alloc++;
     _Multicore_argLimLoc = _Multicore_alloc++;
     _Multicore_callback = readyCallback;
+    _Multicore_knownSAB[0] = _Multicore_mem.buffer;
     for ( var i=0 ; i < numWorkers ; i++ ) {
 	var w = new Worker(workerScript);
 	w.onmessage = messageHandler;
@@ -119,21 +149,56 @@ function _Multicore_init(numWorkers, workerScript, readyCallback) {
 // indexSpace is an array of length-2 arrays determining the index
 //   space of the computation; workers will be invoked on subvolumes
 //   of this space in an unpredictable order.
-// The ...args can be number, SharedTypedArray, or SharedArrayBuffer
-//   values and will be marshalled and passed as arguments to the user
-//   function on the worker side.
+// The ...args can be SharedTypedArray, SharedArrayBuffer, number,
+//   bool, undefined, or null values and will be marshalled and passed
+//   as arguments to the user function on the worker side.
 //
-// You can call this function repeatedly, but only one call can be
-// outstanding: only when the doneCallback has been invoked can
-// Multicore.build be called again.
+// You can call this function repeatedly, but only one call to build
+// or broadcast can be outstanding: only when the doneCallback has
+// been invoked can Multicore.build or Multicore.broadcast be called
+// again.
 
 function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args) {
+    if (!Array.isArray(indexSpace) || indexSpace.length < 1)
+	throw new Error("Bad indexSpace: " + indexSpace);
+    for ( var x of indexSpace )
+	if (x.length != 2 || typeof x[0] != 'number' || typeof x[1] != 'number' || (x[0]|0) != x[0] || (x[1]|0) != x[1])
+	    throw new Error("Bad indexSpace element " + x)
+    // TODO: should check that type of outputMem is SharedArrayBuffer or SharedTypedArray
+    if (!outputMem)
+	throw new Error("Bad output memory: " + outputmem);
+    return _Multicore_comm(doneCallback, fnIdent, outputMem, indexSpace, args);
+}
+
+// Multicore.broadcast()
+//
+// doneCallback is a function, it will be invoked in the master once
+//   the work is finished.
+// fnIdent is the string identifier of the remote function to invoke.
+//   The worker must register an appropriate handler.
+// The ...args can be values of the types as described for build(),
+//   and will be marshalled and passed as arguments to the user
+//   function on the worker side.
+//
+// You can call this function repeatedly, but only one call to build
+// or broadcast can be outstanding: only when the doneCallback has
+// been invoked can Multicore.build or Multicore.broadcast be called
+// again.
+
+function _Multicore_broadcast(doneCallback, fnIdent, ...args) {
+    return _Multicore_comm(doneCallback, fnIdent, null, [], args);
+}
+
+function _Multicore_comm(doneCallback, fnIdent, outputMem, indexSpace, args) {
     const M = _Multicore_mem;
 
     const ARG_INT = 1;
     const ARG_FLOAT = 2;
     const ARG_SAB = 3;
-    const ARG_ARRAY = 4;
+    const ARG_STA = 4;
+    const ARG_BOOL = 5;
+    const ARG_UNDEF = 6;
+    const ARG_NULL = 7;
 
     const TAG_SAB = 1;
     const TAG_I8 = 2;
@@ -149,11 +214,17 @@ function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args)
     const itmp = new Int32Array(tmp);
     const ftmp = new Float64Array(tmp);
 
-    for ( var x of indexSpace )
-	if (x.length != 2 || typeof x[0] != 'number' || typeof x[1] != 'number' || (x[0]|0) != x[0] || (x[1]|0) != x[1])
-	    throw new Error("Bad indexSpace element " + x)
+    // Broadcast
+    if (outputMem === null)
+	outputMem = _Multicore_mem.buffer;
+    if (!_Multicore_barrier.isQuiescent())
+	throw new Error("Do not call Multicore.build until the previous call has completed!");
     var items;
     switch (indexSpace.length) {
+    case 0:
+	// Broadcast
+	items = [];
+	break;
     case 1:
 	items = sliceSpace(indexSpace[0][0], indexSpace[0][1]);
 	break;
@@ -174,7 +245,8 @@ function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args)
 		p = installItems(p, fnIdent, itemSize, items);
 		if (p >= M.length)
 		    throw new Error("Not enough working memory");
-		_Multicore_barrier.release();
+		if (!_Multicore_barrier.release())
+		    throw new Error("Internal barrier error @ 1");
 	    };
 	// Signal message loop exit.
 	// Any negative number larger than numWorkers will do.
@@ -197,7 +269,8 @@ function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args)
 	if (p >= M.length)
 	    throw new Error("Not enough working memory");
     }
-    _Multicore_barrier.release();
+    if (!_Multicore_barrier.release())
+	throw new Error("Internal barrier error @ 2");
 
     function sliceSpace(lo, lim) {
 	var items = [];
@@ -240,6 +313,8 @@ function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args)
 	    M[p++] = c.charCodeAt(0);
 	M[_Multicore_nextLoc] = p;
 	switch (wordsPerItem) {
+	case 0:
+	    break;
 	case 2:
 	    for ( var i of items )
 		for ( var j of i )
@@ -286,6 +361,24 @@ function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args)
 		return;
 	    }
 
+	    if (v === undefined) {
+		argValues.push(ARG_UNDEF);
+		++vno;
+		return;
+	    }
+
+	    if (v === null) {
+		argValues.push(ARG_NULL);
+		++vno;
+		return;
+	    }
+
+	    if (v === true || v === false) {
+		argValues.push(ARG_BOOL | (v ? 256 : 0));
+		++vno;
+		return;
+	    }
+
 	    if (v instanceof SharedArrayBuffer) {
 		argValues.push(ARG_SAB);
 		argValues.push(registerSab(v));
@@ -315,7 +408,7 @@ function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args)
 	    else
 		throw new Error("Argument #" + vno + " must be Number or shared array: " + v);
 
-	    argValues.push(ARG_ARRAY | (tag << 8));
+	    argValues.push(ARG_STA | (tag << 8));
 	    argValues.push(registerSab(v.buffer));
 	    argValues.push(v.byteOffset);
 	    argValues.push(v.length);
@@ -324,7 +417,7 @@ function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args)
 
 	function registerSab(sab) {
 	    for ( var i=0 ; i < _Multicore_knownSAB.length ; i++ )
-		if (_Multicore_knownSAB[i] === x)
+		if (_Multicore_knownSAB[i] === sab)
 		    return i;
 	    var k = _Multicore_knownSAB.length;
 	    _Multicore_knownSAB.push(sab);
@@ -359,6 +452,7 @@ The master has the following actions it wants to accomplish:
 
  - transfer new SAB values
  - perform parallel work
+ - broadcast something
 
 
 Transfer:
@@ -376,13 +470,15 @@ One or more "arguments" are passed in the args area.
 Suppose nextArgLoc < argLimLoc.  Let A=nextArgLoc and M be the
 private working memory.
 
-  the M[A] is a tag: int, float, sab, or array
+  the M[A] is a tag: int, float, bool, null, undefined, sab, or sta
+  if tag==null or tag==undefined then there's no data
+  if tag==bool then the eight bit of the tag is 1 or 0
   if tag==int, then the int follows immediately
   if tag==float, there may be padding and then the float follows immediately
     in native word order
   if tag==sab, then there is one argument word:
     - sab identifier
-  if tag==array, then the tag identifies the array type, and there are
+  if tag==sta, then the tag identifies the array type, and there are
     the following three argument words:
     - sab identifier
     - byteoffset, or 0 for 
@@ -393,5 +489,13 @@ array type.
 
 The arguments past the first are passed to the worker as arguments
 after the index space arguments.
+
+
+Broadcast:
+
+This is exactly as for computation, except that the output array
+argument is always the Multicore system's private metadata SAB, and
+there are no work items.  The worker side recognizes the array as a
+signal and calls the target function once on each worker.
 
 */

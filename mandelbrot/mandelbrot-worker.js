@@ -1,4 +1,4 @@
-importScripts("../util/barrier.js", 
+importScripts("../util/asymmetric-barrier.js", 
 	      "mandelbrot-parameters.js");
 
 // Set this to larger values to zoom in on the center.

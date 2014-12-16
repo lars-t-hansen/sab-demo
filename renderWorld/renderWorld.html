@@ -27,9 +27,9 @@
 <html>
     <head><title>Procedural Map Rendering</title></head>
     <script>
-      const numWorkers = 4;
+      const numWorkers = 6;
     </script>
-    <script type="text/javascript" src="../util/barrier.js"></script>
+    <script type="text/javascript" src="../util/asymmetric-barrier.js"></script>
     <script type="text/javascript" src="../util/multicore-master.js"></script>
     <script type="text/javascript" src="renderWorld.js"></script>
     <style type="text/css">
@@ -51,10 +51,10 @@
     </style>
 
     <body bgcolor="#eeeeee">
-        <canvas id="game" width="960" height="480"></canvas>
         <p id="fps">FPS</p>
         <button id="togglebutton">Go Workers</button>
         <button id="headlessbutton">Disable display</button>
+        <canvas id="game" width="960" height="480"></canvas>
         <script type="text/javascript">init();</script>
     </body>
 </html>

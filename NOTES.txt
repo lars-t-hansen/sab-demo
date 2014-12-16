@@ -1,0 +1,36 @@
+Can guesstimate # of cores from desktop vs mobile: 4 vs 2, say, and multiply by 1.3*(year-2014).
+
+Arguments for API:
+ - propose a new API: navigator.approximateNumberOfCores() that is just a guess, as above,
+   or something better, like an internal measurement plus a fudge factor (could be dynamic too)
+ - demonstrate (or not) that using this number on a range of benchmarks does (or does not)
+   give results that are about as good as when using the actual number of cores
+
+
+
+----------------------------------------
+
+Tools:
+
+race detection
+deadlock detection
+performance of locking / contention etc
+
+race detection (conversation with Julian):
+ - dirty map per byte in the SAB?  two-bit state, one bit for dirty-read and one for dirty-write
+ - reading if dirty-read is set is ok
+ - writing if dirty-read is set is not ok
+ - reading or writing if dirty-write is set is not ok
+ - a barrier may clear the map, but unclear: we are non-racy if there is communication, ie, barrier on both sides,
+   so this is an issue
+ - worry about false positives, so make sure to set bits in proper relation to the operation
+ - loads / stores of bits may be reordered wrt to operation, which is a problem
+ - we also need some sort of stack trace or program location, from both sides
+
+
+----------------------------------------
+
+An interesting demo would be a simple OCR app.  Part of this would be
+recognizing connected components, possibly breaking them apart, and
+then matching components to letters and perhaps words (using a
+dictionary, say).
