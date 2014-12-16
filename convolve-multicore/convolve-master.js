@@ -5,9 +5,9 @@ if (!this.filename) {
     throw new Error("Aborted");
 }
 
-var numWorkers = 4;
 var input, output;
 var image = new PGM();
+var time_before;
 
 Multicore.init(numWorkers, "convolve-worker.js", loadImage);
 
@@ -23,12 +23,15 @@ function convolveImage() {
     input = new SharedUint8Array(h*w);
     input.set(image.data);
     output = new SharedUint8Array(h*w);
+    time_before = Date.now();
     Multicore.build(displayResult, "convolve", output, [[0,h], [0,w]], input, h, w);
 }
 
 function displayResult() {
+    var time_after = Date.now();
     canvasSetFromGrayscale(document.getElementById("mycanvas"),
 			   output,
 			   image.height,
 			   image.width);
+    document.getElementById("myresults").innerHTML = "Number of workers=" + numWorkers + "; time=" + (time_after - time_before) + "ms";
 }

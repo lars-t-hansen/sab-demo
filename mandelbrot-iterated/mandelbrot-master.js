@@ -34,8 +34,7 @@ function showMandelbrot() {
     else {
 	var t = Date.now() - timeBefore;
 	var fps = Math.round((iterations/(t/1000))*10)/10;
-	console.log("Number of workers: " + numWorkers + "  Compute time: " + t + "ms  FPS=" + fps);
-	document.getElementById('caption').innerHTML += '; FPS=' + fps;
+	document.getElementById('myresults').innerHTML = "Number of workers: " + numWorkers + "  Compute time: " + t + "ms  FPS=" + fps;
 	display = true;
     }
     if (display) 

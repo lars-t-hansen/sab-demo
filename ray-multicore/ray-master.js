@@ -1,5 +1,3 @@
-const numWorkers = 7;
-
 const shadows = true;		// Compute object shadows
 const reflection = true;	// Compute object reflections
 const reflection_depth = 2;

@@ -1,10 +1,7 @@
 <html>
 <body>
-<script>
-var param = String(document.location).match(/cores=(\d+)/);
-const numWorkers = param ? parseInt(param[1]) : 8;
-document.write("<div id='caption' style='font-size: large'>Number of workers: " + numWorkers + "</div><div>&nbsp</div>");
-</script>
+<script src="../util/numWorkers.js"></script>
+<div id=myresults>&nbsp;</div>
 <canvas id=mycanvas></canvas>
 <script src="../util/canvas.js"></script>
 <script src="../util/asymmetric-barrier.js"></script>

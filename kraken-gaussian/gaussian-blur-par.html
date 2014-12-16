@@ -50,6 +50,7 @@
     <p>This benchmark performs a <a href="http://en.wikipedia.org/wiki/Gaussian_blur">Gaussian blur</a> on a photo.</p>
     <p><small>Photo courtesy <a href="http://www.flickr.com/photos/katclay/4296523922/in/photostream/">Kat Clay</a> from Flickr</small>.</p>
     <img id="image" src="squid.png" width="400" height="267">
+    <script src="../util/numWorkers.js"></script>
     <canvas id="canvas" width="400" height="267"></canvas>
     <script src="../util/asymmetric-barrier.js"></script>
     <script src="../util/multicore-master.js"></script>
@@ -57,7 +58,6 @@
       var sigma = 10; // radius
       var kernel, kernelSum;
       const kernelSize = 7;
-      const numWorkers = 4;
 
       Multicore.init(numWorkers, "gaussian-blur-worker.js", function () {
         buildKernel();

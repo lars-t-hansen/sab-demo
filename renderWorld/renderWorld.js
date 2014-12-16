@@ -374,12 +374,13 @@ World.prototype.postClock = function (start_time, retrigger) {
 	this.ctx.putImageData(this.pixels, 0, 0);
     var frames = this.frames;
     // warmup
+    var cs = this.MODE == "workers" ? (numWorkers + " ") : "";
     if(frames > 9) {
         this.time_elapsed += Date.now() - start_time;
-        document.getElementById("fps").innerHTML = this.MODE + "  " + Math.floor((frames-9)*1000/this.time_elapsed) + " fps";
+        document.getElementById("fps").innerHTML = cs + this.MODE + "  " + Math.floor((frames-9)*1000/this.time_elapsed) + " fps";
     }
     else {
-        document.getElementById("fps").innerHTML = this.MODE + "  " + "-- fps";
+        document.getElementById("fps").innerHTML = cs + this.MODE + "  " + "-- fps";
     }
     if (retrigger) {
 	CALLBACK_PENDING = true;
