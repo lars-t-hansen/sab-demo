@@ -96,3 +96,52 @@ var blob = new Blob(["importScripts('" + me.substring(0,me.lastIndexOf("/")+1) +
 var blobUrl = URL.createObjectURL(blob);
 Multicore.init(1, blobUrl, function () { URL.releaseObjectURL(blobUrl); ... });
 
+----------------------------------------
+
+What's the meaning of nested Multicore.build calls?
+
+A nested build is really an insertion into the beginning of the task
+queue of a new set of work items, along with a barrier.  Or perhaps
+the better conception is that it is a new, higher priority task queue,
+with an implicit barrier.
+
+That is, when a worker is looking for work it will take the first
+available task from the highest priority task queue, and when that
+queue is drained it will enter a barrier (and all will participate in
+that barrier).
+
+However this means the worker needs to participate in some kind of
+callback scheme (for the barrier), it certainly can't block directly.
+But here's what it is:
+
+Multicore.build = function (cb, fn, mem, ix, ...args) {
+  var q = create_queue(ix);
+  push_queue(q);		// Racy: other workers may enter a different barrier... so there can be only one barrier object
+  while (any_work_in_any_queue_not_at_lowest_pri) {
+     while (t = get_hipri_task())
+       t();
+    barrier();
+  }
+}
+
+It's possible that the priority levels are more structured and
+correspond directly to the nesting level of build.  But I'm not sure
+how we handle barriers in that case.
+
+Also the nested builds may have created shared memory objects that
+need to be distributed to all workers, which means all workers must
+exit to the event loop in any case.
+
+----------------------------------------
+
+Two-pass separable convolution:
+
+In this case one would process along rows in the first pass and along
+columns in the second pass, so one might want to stripe the grid first
+along one dimension and then along the other.  The hints to Multicore
+may not handle that because it requires that if a dimension is split
+then all the dimensions to its left are also split.  That's probably
+an artificial limitation.  We could clearly split along one, the
+other, or both, and we should take the presence of a hint in one
+direction to mean that the absence of a hint in the other direction
+means "don't split".

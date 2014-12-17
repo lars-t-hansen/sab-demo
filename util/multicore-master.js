@@ -29,6 +29,11 @@
 //    master by using worker-only barriers between the stages in such
 //    a pipeline.
 //
+//    The obvious API is to pass a callback function when we need to
+//    be notified (normally the last call in a work set), and to pass
+//    null callbacks when notification is not needed (and the barrier
+//    can be optimized).
+//
 //  - Nested parallelism is desirable, ie, a worker should be allowed
 //    to invoke Multicore.build, suspending until that subcomputation
 //    is done.  (Broadcast and eval are less obvious.)
