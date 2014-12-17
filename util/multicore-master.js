@@ -154,8 +154,8 @@ function _Multicore_init(numWorkers, workerScript, readyCallback) {
 //
 // doneCallback is a function, it will be invoked in the master once
 //   the work is finished.
-// fnIdent is the string identifier of the remote function to invoke.
-//   The worker must register an appropriate handler.
+// fnIdent is the string identifier of the remote function to invoke,
+//   it names a function in the global scope of the worker.
 // outputMem is a SharedTypedArray or SharedArrayBuffer that will (in
 //   principle, though it's up to user code) receive the results of
 //   the computation.
@@ -197,8 +197,8 @@ function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args)
 //
 // doneCallback is a function, it will be invoked in the master once
 //   the work is finished.
-// fnIdent is the string identifier of the remote function to invoke.
-//   The worker must register an appropriate handler.
+// fnIdent is the string identifier of the remote function to invoke,
+//   it names a function in the global scope of the worker.
 // The ...args can be values of the types as described for build(),
 //   and will be marshalled and passed as arguments to the user
 //   function on the worker side.

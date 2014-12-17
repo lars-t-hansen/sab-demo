@@ -2,8 +2,6 @@ importScripts("../util/asymmetric-barrier.js",
 	      "../util/multicore-worker.js",
 	      "mandelbrot-parameters.js");
 
-Multicore.addFunction("mandelbrot", mandelbrot);
-
 // Maximum iterations per pixel.
 const MAXIT = 1000;
 

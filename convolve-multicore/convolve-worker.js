@@ -4,8 +4,6 @@ importScripts("../util/asymmetric-barrier.js",
 // http://blancosilva.wordpress.com/teaching/mathematical-imaging/edge-detection-the-convolution-approach/
 // Faler's approach.
 
-Multicore.addFunction("convolve", convolve);
-
 function convolve(output, ylo, yhi, xlo, xhi, input, height, width) {
     function c1(xmm,xzm,xpm,xmz,xzz,xpz,xmp,xzp,xpp) {
 	// (-1  0  1)

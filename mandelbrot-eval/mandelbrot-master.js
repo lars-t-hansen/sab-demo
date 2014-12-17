@@ -77,8 +77,6 @@ const g_center_y = ${g_center_y};
 const height = ${height};
 const width = ${width};
 
-Multicore.addFunction("mandelbrot", mandelbrot);
-
 // Maximum iterations per pixel.
 const MAXIT = 200;
 

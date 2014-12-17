@@ -1,9 +1,6 @@
 importScripts("../util/asymmetric-barrier.js",
 	      "../util/multicore-worker.js");
 
-Multicore.addFunction("MineKernel", MineKernel);
-Multicore.addFunction("Setup", Setup);
-
 var wself = {};
 
 function Setup(w, h, map, texmap) {

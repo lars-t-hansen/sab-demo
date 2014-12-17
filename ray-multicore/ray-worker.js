@@ -1,10 +1,6 @@
 importScripts("../util/asymmetric-barrier.js",
 	      "../util/multicore-worker.js");
 
-Multicore.addFunction("setupScene", setupScene);
-Multicore.addFunction("setupParameters", setupParameters);
-Multicore.addFunction("trace", trace);
-
 // Begin rendering parameters
 
 var height = 0;

@@ -1,8 +1,6 @@
 importScripts("../util/asymmetric-barrier.js",
               "../util/multicore-worker.js");
 
-Multicore.addFunction("blurKernel", blurKernel);
-
 function blurKernel(data, ymin, ylim, xmin, xlim, dataIn, height, width, kernel, kernelSize, kernelSum) {
           for (var y = ymin; y < ylim; ++y) {
             for (var x = xmin; x < xlim; ++x) {

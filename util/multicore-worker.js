@@ -10,10 +10,6 @@
 //
 // Load this into your worker code, after loading asymmetric-barrier.js.
 //
-// Call Multicore.addFunction() to register functions with the
-// framework.  The functions will be invoked when work orders are
-// received from the master.  (The framework owns the message loop.)
-//
 // Each worker function takes an object (the output array), an even
 // number of loop bounds (lo ... hi, for lo <= index < hi), and any
 // additional arguments that were passed by the master.
@@ -25,23 +21,8 @@
 
 const Multicore =
     {
-	addFunction: _Multicore_addFunction,
 	msg: _Multicore_msg
     };
-
-// Register a worker function.
-//
-// name is a string; user code will pass this string to Multicore.build()
-//   on the master side.
-// func is the function to invoke.  It will be called on the output object,
-//   an even number of index range values (pairs of lo and hi, lo <= index < hi),
-//   and on any other arguments user code passes to Multicore.build().
-//
-// Returns nothing.
-
-function _Multicore_addFunction(name, func) {
-    _Multicore_functions[name] = func;
-}
 
 // Print a message on the console.
 
@@ -61,10 +42,7 @@ var _Multicore_nextArgLoc = 0;
 var _Multicore_argLimLoc = 0;
 var _Multicore_sab = null;
 var _Multicore_knownSAB = [null];	// Direct map from ID to SAB
-var _Multicore_functions = {};
 var _Multicore_global = this;
-
-Multicore.addFunction("_Multicore_eval", _Multicore_eval);
 
 onmessage =
     function (ev) {
@@ -140,8 +118,8 @@ function _Multicore_messageLoop() {
 	var id = "";
 	for ( var i=0 ; i < l ; i++ )
 	    id += String.fromCharCode(M[p++]);
-	var fn = _Multicore_functions[id];
-	if (!fn)
+	var fn = _Multicore_global[id];
+	if (!fn || !(fn instanceof Function))
 	    throw new Error("No function installed for ID '" + id + "'");
 
 	// Passing the private memory as the output buffer is a special signal.
