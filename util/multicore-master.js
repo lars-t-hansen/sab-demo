@@ -21,18 +21,15 @@
 // broadcast program code or precomputations.
 //
 // TODO:
-//  - Currently only one build, broadcast, or eval can be outstanding
-//    at one time.  That's not a huge hardship but it's easy to see
-//    that the master might want to create a queue of operations and
-//    receive a callback once they're all done.  There would probably
-//    be an efficiency win if we could avoid the trip through the
-//    master by using worker-only barriers between the stages in such
-//    a pipeline.
+//  - When a callback is null, the full master/worker barrier is not
+//    needed, a worker-only barrier is enough and is probably quite a
+//    bit faster.  It would be useful to implement that optimization.
 //
-//    The obvious API is to pass a callback function when we need to
-//    be notified (normally the last call in a work set), and to pass
-//    null callbacks when notification is not needed (and the barrier
-//    can be optimized).
+//    Indeed, when operations are queued, we still make use of the
+//    master-worker barrier and the callback mechanism, meaning the
+//    master must return to the event loop for queued items to be
+//    processed.  Using the worker-only barrier would probably help
+//    remove that requirement.
 //
 //  - Nested parallelism is desirable, ie, a worker should be allowed
 //    to invoke Multicore.build, suspending until that subcomputation
@@ -81,6 +78,7 @@ var _Multicore_limLoc = 0;
 var _Multicore_nextArgLoc = 0;
 var _Multicore_argLimLoc = 0;
 var _Multicore_knownSAB = [null];
+var _Multicore_queue = [];
 
 // Multicore.init()
 //
@@ -152,8 +150,8 @@ function _Multicore_init(numWorkers, workerScript, readyCallback) {
 // Invoke a function in parallel on sections of an index space,
 // producing output into a predefined shared memory array.
 //
-// doneCallback is a function, it will be invoked in the master once
-//   the work is finished.
+// doneCallback is a function or null.  If a function, it will be
+//   invoked in the master once the work is finished.
 // fnIdent is the string identifier of the remote function to invoke,
 //   it names a function in the global scope of the worker.
 // outputMem is a SharedTypedArray or SharedArrayBuffer that will (in
@@ -174,10 +172,15 @@ function _Multicore_init(numWorkers, workerScript, readyCallback) {
 // Thus if the length of indexSet is three and there are four
 // additional arguments then the number of arguments is 1+2*3+4.
 //
-// Serialization of calls: You can call this function repeatedly, but
-// only one call to build, broadcast, or eval can be outstanding: only
-// when the doneCallback has been invoked can build, broadcast, or
-// eval be called again.
+// Serialization of calls: You can call build, broadcast, or eval
+// repeatedly without waiting for callbacks.  The calls will be queued
+// by the framework and dispatched in order.  All object arguments
+// will be retained by reference while a call is queued; beware of
+// side effects.
+//
+// Note, however, that the queueing system currently depends on a
+// system-supplied callback, so the master must return to its event
+// loop for the dispatching of queued tasks.
 
 function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args) {
     if (!Array.isArray(indexSpace) || indexSpace.length < 1)
@@ -195,8 +198,8 @@ function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args)
 //
 // Invoke a function once on each worker.
 //
-// doneCallback is a function, it will be invoked in the master once
-//   the work is finished.
+// doneCallback is a function or null.  If a function, it will be
+//   invoked in the master once the work is finished.
 // fnIdent is the string identifier of the remote function to invoke,
 //   it names a function in the global scope of the worker.
 // The ...args can be values of the types as described for build(),
@@ -206,7 +209,8 @@ function _Multicore_build(doneCallback, fnIdent, outputMem, indexSpace, ...args)
 // The handler function identified by fnIdent will be invoked on the
 // ...args only, no other arguments are passed.
 //
-// See note about serialization of calls on Multicore.build().
+// See the note about serialization of calls on the documentation for
+// Multicore.build().
 
 function _Multicore_broadcast(doneCallback, fnIdent, ...args) {
     return _Multicore_comm(doneCallback, fnIdent, null, [], args);
@@ -216,12 +220,13 @@ function _Multicore_broadcast(doneCallback, fnIdent, ...args) {
 //
 // Evaluate a program once on each worker.
 //
-// doneCallback is a function, it will be invoked in the master once
-//   the work is finished.
+// doneCallback is a function or null.  If a function, it will be
+//   invoked in the master once the work is finished.
 // program is textual program code, to be evaluated in the global
 //   scope of the worker.
 //
-// See note about serialization of calls on Multicore.build().
+// See the note about serialization of calls on the documentation for
+// Multicore.build().
 
 function _Multicore_eval(doneCallback, program) {
     _Multicore_broadcast(doneCallback, "_Multicore_eval", program);
@@ -253,6 +258,12 @@ function _Multicore_comm(doneCallback, fnIdent, outputMem, indexSpace, args) {
     const itmp = new Int32Array(tmp);
     const ftmp = new Float64Array(tmp);
 
+    // Operation in flight?  Just enqueue this one.
+    if (_Multicore_callback) {
+	_Multicore_queue.push([doneCallback, fnIdent, outputMem, indexSpace, args]);
+	return;
+    }
+
     // Broadcast
     if (outputMem === null)
 	outputMem = _Multicore_mem.buffer;
@@ -275,6 +286,14 @@ function _Multicore_comm(doneCallback, fnIdent, outputMem, indexSpace, args) {
     }
     const itemSize = indexSpace.length * 2;
     var { argValues, newSAB } = processArgs(outputMem, args);
+    if (doneCallback === null)
+	doneCallback = processQueue;
+    else
+	doneCallback = (function (doneCallback) {
+	    return function () {
+		processQueue();
+		doneCallback();
+	    } })(doneCallback);
     if (newSAB.length) {
 	_Multicore_callback =
 	    function () {
@@ -310,6 +329,11 @@ function _Multicore_comm(doneCallback, fnIdent, outputMem, indexSpace, args) {
     }
     if (!_Multicore_barrier.release())
 	throw new Error("Internal barrier error @ 2");
+
+    function processQueue() {
+	if (_Multicore_queue.length)
+	    _Multicore_comm.apply(Multicore, _Multicore_queue.shift());
+    }
 
     function sliceSpace(lo, lim) {
 	var items = [];

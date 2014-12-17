@@ -1,0 +1,51 @@
+<!-- test that we can enqueue a bunch of operations and use null callbacks -->
+
+<script src="../util/asymmetric-barrier.js"></script>
+<script src="../util/multicore-master.js"></script>
+<script>
+var myloc = String(document.location);
+var baseloc = myloc.substring(0,myloc.lastIndexOf("/"));
+var emptyWorker = URL.createObjectURL(new Blob([`importScripts('${baseloc}/../util/asymmetric-barrier.js','${baseloc}/../util/multicore-worker.js')`]));
+
+Multicore.init(1, emptyWorker, runTest);
+
+var array = new SharedInt32Array(256);
+
+function runTest() {
+    Multicore.eval(null, `
+Multicore.msg('1');
+function add1(mem, lo, hi) {
+    for ( var i=lo ; i < hi ; i++ )
+        mem[i]++;
+}
+var param;
+function defparam(x) {
+Multicore.msg('def');
+    param = x;
+}
+function addparam(mem, lo, hi) {
+    for ( var i=lo ; i < hi ; i++ )
+        mem[i]+=param;
+}
+`);
+    Multicore.eval(null, `
+Multicore.msg('2');
+function add5(mem, lo, hi) {
+    for ( var i=lo ; i < hi ; i++ )
+        mem[i]+=5;
+}
+`);
+    Multicore.broadcast(null, "defparam", 37);
+    Multicore.build(null, "add1", array, [[0, array.length]]);
+    Multicore.build(null, "add5", array, [[0, array.length]]);
+    Multicore.build(null, "add1", array, [[0, array.length]]);
+    Multicore.build(doneTest, "addparam", array, [[0, array.length]]);
+}
+
+function doneTest() {
+    for ( var i=0 ; i < array.length ; i++ )
+	if (array[i] != 1+5+1+37)
+	    console.log(`Wrong @ ${i}: ${array[i]}`);
+    console.log("Done");
+}
+</script>
