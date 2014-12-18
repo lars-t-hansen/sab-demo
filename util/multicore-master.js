@@ -25,11 +25,13 @@
 //    needed, a worker-only barrier is enough and is probably quite a
 //    bit faster.  It would be useful to implement that optimization.
 //
-//    Indeed, when operations are queued, we still make use of the
-//    master-worker barrier and the callback mechanism, meaning the
-//    master must return to the event loop for queued items to be
-//    processed.  Using the worker-only barrier would probably help
-//    remove that requirement.
+//    Indeed, when operations are queued, the current implementation
+//    still makes use of the master-worker barrier and the callback
+//    mechanism, meaning the master must return to the event loop for
+//    queued items to be processed, and is actually holding up
+//    progress if it does not return to the main loop on a fairly
+//    prompt basis.  Using the worker-only barrier would probably help
+//    remove that requirement (which is documented).
 //
 //  - Nested parallelism is desirable, ie, a worker should be allowed
 //    to invoke Multicore.build, suspending until that subcomputation
@@ -42,17 +44,29 @@
 //    cutoff (bleah) or a warning for large ones, and an error for
 //    circular ones.
 //
-//  - The original conception of Multicore.build allowed the index
-//    space to contain hints to aid load balancing.  It would be
-//    useful to import that idea, probably, or at least experiment
-//    with it to see if it really affects performance.
-//
 //  - There is unnecessary lock overhead in having the single work
 //    queue (the pointer for the next item is hotly contended), that
 //    might be improved by having per-worker queues with work stealing
 //    or some sort of batch refilling.  It should not matter too much
-//    if the grain is "right" (see previous item) but it would be
-//    useful to know.
+//    if the grain is "right" (see later item on hinting) but it would
+//    be useful to know.
+//
+// API CONCERNS:
+//  - Since we don't have memory isolation in this conception of
+//    Multicore.build, and the output array can be passed as an
+//    argument in any case, it may be that we should move to a
+//    Multicore.invoke(cb, name, idx, arg, ...) style, and get rid of
+//    build() in its current form.
+//
+//  - The original conception of Multicore.build would operate on
+//    individual index range elements unless an index was SPLIT.  In
+//    the conception here, the index is always split.  Is this
+//    reasonable, or should we incorporate the non-tiled API as well?
+//
+//  - The original conception of Multicore.build allowed the index
+//    space to contain hints to aid load balancing.  It would be
+//    useful to import that idea, probably, or at least experiment
+//    with it to see if it really affects performance.
 
 "use strict";
 
