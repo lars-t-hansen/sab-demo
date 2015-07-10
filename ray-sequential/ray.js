@@ -182,7 +182,7 @@ Bitmap.prototype.ref =
 // Not a hot function
 Bitmap.prototype.setColor =
     function (y, x, v) {
-	this.data[(this.height-y)*this.width+x] = (255<<24)|((255*v.z)<<16)|((255*v.y)<<8)|(255*v.x);
+	this.data[(this.height-y-1)*this.width+x] = (255<<24)|((255*v.z)<<16)|((255*v.y)<<8)|(255*v.x);
     };
 
 const height = 600;
