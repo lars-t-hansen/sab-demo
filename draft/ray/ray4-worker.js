@@ -229,16 +229,16 @@ onmessage =
     function (ev) {
 	var [x, y, a, b, c] = ev.data;
 	sab = x;
-	fm = new SharedFloat64Array(sab, FMLOC, FMMAX);
-	om = new SharedInt32Array(sab, OMLOC, OMMAX);
-	ix = new SharedInt32Array(sab, IXLOC, IXNUM);
-	pool = new SharedInt32Array(sab, POLOC, PONUM);
+	fm = new Float64Array(sab, FMLOC, FMMAX);
+	om = new Int32Array(sab, OMLOC, OMMAX);
+	ix = new Int32Array(sab, IXLOC, IXNUM);
+	pool = new Int32Array(sab, POLOC, PONUM);
 	om_ = y;
 	eye = a;
 	light = b;
 	background = c;
-	bits = new SharedInt32Array(sab, BMLOC, BMNUM);
-	barrier = new WorkerBarrier(1337, new SharedInt32Array(sab, BALOC, BANUM), 0);
+	bits = new Int32Array(sab, BMLOC, BMNUM);
+	barrier = new WorkerBarrier(1337, new Int32Array(sab, BALOC, BANUM), 0);
 	for ( var i=0 ; i < ITER ; i++ ) {
 	    barrier.enter();	// wait for the goahead / signal completion
 	    var limit = Atomics.load(ix, 1);

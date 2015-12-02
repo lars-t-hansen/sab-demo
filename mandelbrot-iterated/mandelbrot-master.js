@@ -7,8 +7,8 @@ const animate = true;
 Multicore.init(numWorkers, "mandelbrot-worker.js", doMandelbrot);
 
 const rawmem = new SharedArrayBuffer(height*width*4*2);
-const mem1 = new SharedInt32Array(rawmem, 0, height*width);
-const mem2 = new SharedInt32Array(rawmem, height*width*4, height*width);
+const mem1 = new Int32Array(rawmem, 0, height*width);
+const mem2 = new Int32Array(rawmem, height*width*4, height*width);
 
 var magnification = 1;
 var iterations = 0;
@@ -37,9 +37,9 @@ function showMandelbrot() {
 	document.getElementById('myresults').innerHTML = "Number of workers: " + numWorkers + "  Compute time: " + t + "ms  FPS=" + fps;
 	display = true;
     }
-    if (display) 
+    if (display)
 	canvasSetFromABGRBytes(document.getElementById("mycanvas"),
-			       new SharedUint8Array(rawmem, memnow.byteOffset, height*width*4),
+			       new Uint8Array(rawmem, memnow.byteOffset, height*width*4),
 			       height,
 			       width);
 }

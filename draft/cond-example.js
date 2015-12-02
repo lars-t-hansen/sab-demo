@@ -16,7 +16,7 @@ const AVAIL = QSIZ;
 const TAIL = AVAIL+1;
 const HEAD = TAIL+1;
 const QEXTRA = 3;
-var q = new SharedInt32Array(iab, qoffset, QSIZ+QEXTRA);
+var q = new Int32Array(iab, qoffset, QSIZ+QEXTRA);
 
 // A condition variable
 var c = new MasterCond(iab, offset);

@@ -1,5 +1,5 @@
 var numWorkers = 4;
-var iab = new SharedInt32Array(1024*100);
+var iab = new Int32Array(new SharedArrayBuffer(1024*100*Int32Array.BYTES_PER_ELEMENT));
 var lockLoc = 0;
 var flagLoc = lockLoc + MasterLock.NUMLOCS;
 var compLoc = flagLoc + 1;

@@ -32,8 +32,8 @@ Multicore.init(numWorkers,
 	       });
 
 const rawmem = new SharedArrayBuffer(height*width*4*2);
-const mem1 = new SharedInt32Array(rawmem, 0, height*width);
-const mem2 = new SharedInt32Array(rawmem, height*width*4, height*width);
+const mem1 = new Int32Array(rawmem, 0, height*width);
+const mem2 = new Int32Array(rawmem, height*width*4, height*width);
 
 var magnification = 1;
 var iterations = 0;
@@ -64,7 +64,7 @@ function showMandelbrot() {
     }
     if (display)
 	canvasSetFromABGRBytes(document.getElementById("mycanvas"),
-			       new SharedUint8Array(rawmem, memnow.byteOffset, height*width*4),
+			       new Uint8Array(rawmem, memnow.byteOffset, height*width*4),
 			       height,
 			       width);
 }

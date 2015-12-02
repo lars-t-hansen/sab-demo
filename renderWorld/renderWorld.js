@@ -46,8 +46,8 @@ var World = function() {
     this.map = null;
     this.texmap = null;
 
-    this.map = new SharedFloat32Array(64 * 64 * 64);
-    this.texmap = new SharedFloat32Array(16 * 16 * 3 * 16);
+    this.map = new Float32Array(new SharedArrayBuffer(64 * 64 * 64 * 8));
+    this.texmap = new Float32Array(new SharedArrayBuffer(16 * 16 * 3 * 16 * 4));
     this.frames = 0;
     this.sharedResultArray = null;	// Will be initialized if needed
 
@@ -80,7 +80,7 @@ World.prototype.toggleExecutionMode = function () {
     case "pjs":
         this.MODE = "workers";
 	if (this.sharedResultArray == null) {
-	    this.sharedResultArray = new SharedInt32Array(this.w*this.h);
+	    this.sharedResultArray = new Int32Array(new SharedArrayBuffer(this.w*this.h*4));
 	    Multicore.init(numWorkers,
 			   "renderWorld-worker.js",
 			   () => {

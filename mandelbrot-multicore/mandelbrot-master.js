@@ -3,7 +3,7 @@ const magnification = 100;
 
 Multicore.init(numWorkers, "mandelbrot-worker.js", doMandelbrot);
 
-const mem = new SharedInt32Array(height*width);
+const mem = new Int32Array(new SharedArrayBuffer(height*width*4));
 var timeBefore;
 
 function doMandelbrot() {
@@ -14,7 +14,7 @@ function doMandelbrot() {
 function mandelbrotDone() {
     document.getElementById('myresults').innerHTML = "Number of workers: " + numWorkers + "  Compute time: " + (Date.now() - timeBefore) + "ms";
     canvasSetFromABGRBytes(document.getElementById("mycanvas"),
-			   new SharedUint8Array(mem.buffer, 0, height*width*4),
+			   new Uint8Array(mem.buffer, 0, height*width*4),
 			   height,
 			   width);
 }

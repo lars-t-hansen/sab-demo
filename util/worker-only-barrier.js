@@ -7,7 +7,7 @@
 // This is a barrier for synchronizing workers without having to
 // involve the master.
 //
-// Somebody allocates locations in the SharedInt32Array.  Information
+// Somebody allocates locations in the Int32Array.  Information
 // about the array and locations must then be broadcast to all
 // workers, who must create local WorkerOnlyBarrier objects.
 //

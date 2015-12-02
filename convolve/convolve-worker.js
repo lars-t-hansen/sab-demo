@@ -10,8 +10,8 @@ onmessage =
 	    break;
 	case "data":
 	    var [_, a, b] = ev.data;
-	    g = new SharedUint8Array(a);
-	    h = new SharedUint8Array(b);
+	    g = new Uint8Array(a);
+	    h = new Uint8Array(b);
 	    break;
 	case "compute":
 	    var [_, height, width, lo, hi] = ev.data;

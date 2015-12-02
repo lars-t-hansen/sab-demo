@@ -3,7 +3,7 @@ const numWorkers = 4;
 // The memory contains the height*width grid and extra shared space
 // for the barrier that is used to coordinate workers.
 
-const mem = new SharedInt32Array(height*width + MasterBarrier.NUMLOCS);
+const mem = new Int32Array(new SharedArrayBuffer((height*width + MasterBarrier.NUMLOCS)*Int32Array.BYTES_PER_ELEMENT));
 const sab = mem.buffer;
 const barrierLoc = height*width; // Barrier memory follows grid memory
 const barrierID = 1337;
@@ -41,7 +41,7 @@ function barrierQuiescent() {
     else {
 	console.log("Number of workers: " + numWorkers + "  Compute time: " + (Date.now() - timeBefore) + "ms");
 	canvasSetFromABGRBytes(document.getElementById("mycanvas"),
-			       new SharedUint8Array(sab, 0, height*width*4),
+			       new Uint8Array(sab, 0, height*width*4),
 			       height,
 			       width);
     }

@@ -31,7 +31,7 @@
 function mandelbrot_asm_module(glob, ffi, heap) {
     "use asm";
 
-    var i32 = new glob.SharedInt32Array(heap);
+    var i32 = new glob.Int32Array(heap);
     var imul = glob.Math.imul;
 
     function mbrot(width, height, g_center_y, g_center_x, ybase, ylimit, magnification) {

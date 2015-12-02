@@ -17,8 +17,8 @@ const sab = new SharedArrayBuffer(SharedBytes);
 //
 // Each triple is in (x,y,z) order.
 
-const fm = new SharedFloat64Array(sab, FMLOC, FMMAX);	// Scene graph objects are allocated here
-const om = new SharedInt32Array(sab, OMLOC, OMMAX);	// List of object triples
+const fm = new Float64Array(sab, FMLOC, FMMAX);	// Scene graph objects are allocated here
+const om = new Int32Array(sab, OMLOC, OMMAX);	// List of object triples
 
 var fm_ = 0;
 var om_ = 3;			        // 0 is reserved for 'no data'
@@ -60,7 +60,7 @@ function write_Triangle(material, v1, v2, v3) {
     oalloc(TRIANGLE, material, p);
 }
 
-const bits = new SharedInt32Array(sab, BMLOC, BMNUM);
+const bits = new Int32Array(sab, BMLOC, BMNUM);
 const initial = DL3(152.0/256.0, 251.0/256.0, 152.0/256.0); // Pale green
 const initialc = (255<<24)|((255*initial.z)<<16)|((255*initial.y)<<8)|(255*initial.x)
 for ( var i=0, l=width*height ; i < l ; i++ )
@@ -69,12 +69,12 @@ for ( var i=0, l=width*height ; i < l ; i++ )
 var numWorkers;			// Set by main
 var barrier = null;		// Set by main
 
-const ix = new SharedInt32Array(sab, IXLOC, IXNUM);
-const pool = new SharedInt32Array(sab, POLOC, PONUM);
+const ix = new Int32Array(sab, IXLOC, IXNUM);
+const pool = new Int32Array(sab, POLOC, PONUM);
 
 var setup = false;
 var workers = [];
-			  
+
 function main(cores) {
     if (!setup) {
 	// Initialize fm, om, om_, eye, light, background
@@ -95,11 +95,11 @@ function main(cores) {
 
 	setup = true;
     }
-    
+
     Atomics.store(ix, 0, 0);
     Atomics.store(ix, 1, POY*POX);
     numWorkers = cores;
-    barrier = new MasterBarrier(1337, numWorkers, new SharedInt32Array(sab, BALOC, BANUM), 0, () => barrierTrigger());
+    barrier = new MasterBarrier(1337, numWorkers, new Int32Array(sab, BALOC, BANUM), 0, () => barrierTrigger());
     timeBefore = null
     it = 0;
 
@@ -143,7 +143,7 @@ function showResult() {
     var mycanvas = document.getElementById("mycanvas");
     var cx = mycanvas.getContext('2d');
     var id  = cx.createImageData(width, height);
-    id.data.set(new SharedUint8Array(sab, BMLOC, BMSIZ));
+    id.data.set(new Uint8Array(sab, BMLOC, BMSIZ));
     cx.putImageData( id, 0, 0 );
 }
 

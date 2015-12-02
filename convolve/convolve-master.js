@@ -20,8 +20,8 @@ function convolveImage() {
     var height = image.height;
     var width = image.width;
 
-    g = new SharedUint8Array(height*width);
-    h = new SharedUint8Array(height*width);
+    g = new Uint8Array(new SharedArrayBuffer(height*width));
+    h = new Uint8Array(new SharedArrayBuffer(height*width));
 
     for ( var w of workers )
 	w.postMessage(["data", g.buffer, h.buffer], [g.buffer, h.buffer]);

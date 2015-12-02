@@ -19,7 +19,7 @@ var start_time, end_time;
 var frames = 1;			// Set to 1 for a single frame
 
 function main() {
-    pixels = new SharedInt32Array(height*width);
+    pixels = new Int32Array(new SharedArrayBuffer(height*width*Int32Array.BYTES_PER_ELEMENT));
     Multicore.init(numWorkers, "ray-worker.js", doSetup);
 }
 
@@ -50,7 +50,7 @@ function doDisplay() {
     var mycanvas = document.getElementById("mycanvas");
     var cx = mycanvas.getContext('2d');
     var id  = cx.createImageData(width, height);
-    id.data.set(new SharedUint8Array(pixels.buffer));
+    id.data.set(new Uint8Array(new SharedArrayBuffer(pixels.buffer)));
     cx.putImageData( id, 0, 0 );
     document.getElementById("mycaption").innerHTML = numWorkers + " workers, time=" + (end_time - start_time) + "ms";
 }

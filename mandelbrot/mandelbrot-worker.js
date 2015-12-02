@@ -11,7 +11,7 @@ var glob = this;
 onmessage =
     function (ev) {
 	var [_, sab, barrierID, barrierLoc, ybase, ylimit] = ev.data;
-	mem = new SharedInt32Array(sab);
+	mem = new Int32Array(sab);
 	barrier = new WorkerBarrier(barrierID, mem, barrierLoc);
 
 	barrier.enter();	// Wait for the goahead

@@ -39,7 +39,7 @@
 //
 // - 'ID' identifies the barrier globally
 // - 'numWorkers' is the number of workers that will coordinate
-// - 'iab' is a SharedInt32Array
+// - 'iab' is a shared Int32Array
 // - 'loc' is the first of several consecutive locations within 'iab'
 // - 'callback' is the function that is to be called when the workers
 //   are all waiting in the barrier with this ID.
@@ -108,7 +108,7 @@ MasterBarrier.prototype.release =
 // Create the worker side of a barrier.
 //
 // - 'ID' identifies the barrier globally
-// - 'iab' is a SharedInt32Array
+// - 'iab' is a shared Int32Array
 // - 'loc' is the first of several consecutive locations within 'iab'
 
 function WorkerBarrier(ID, iab, loc) {

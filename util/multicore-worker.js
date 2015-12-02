@@ -49,7 +49,7 @@ onmessage =
 	switch (ev.data[0]) {
 	case "start":
 	    var [_, sab, barrierLoc, funcLoc, sizeLoc, nextLoc, limLoc, nextArgLoc, argLimLoc] = ev.data;
-	    _Multicore_mem = new SharedInt32Array(sab);
+	    _Multicore_mem = new Int32Array(sab);
 	    _Multicore_barrier = new WorkerBarrier(0x1337, _Multicore_mem, barrierLoc);
 	    _Multicore_funcLoc = funcLoc;
 	    _Multicore_sizeLoc = sizeLoc;
@@ -192,15 +192,15 @@ function _Multicore_messageLoop() {
 	    var byteOffset = M[nextArg++];
 	    var length = M[nextArg++];
 	    switch (tag >> 8) {
-	    case TAG_I8: return new SharedInt8Array(sab, byteOffset, length);
-	    case TAG_U8: return new SharedUint8Array(sab, byteOffset, length);
-	    case TAG_CU8: return new SharedUint8ClampedArray(sab, byteOffset, length);
-	    case TAG_I16: return new SharedInt16Array(sab, byteOffset, length);
-	    case TAG_U16: return new SharedUint16Array(sab, byteOffset, length);
-	    case TAG_I32: return new SharedInt32Array(sab, byteOffset, length);
-	    case TAG_U32: return new SharedUint32Array(sab, byteOffset, length);
-	    case TAG_F32: return new SharedFloat32Array(sab, byteOffset, length);
-	    case TAG_F64: return new SharedFloat64Array(sab, byteOffset, length);
+	    case TAG_I8: return new Int8Array(sab, byteOffset, length);
+	    case TAG_U8: return new Uint8Array(sab, byteOffset, length);
+	    case TAG_CU8: return new Uint8ClampedArray(sab, byteOffset, length);
+	    case TAG_I16: return new Int16Array(sab, byteOffset, length);
+	    case TAG_U16: return new Uint16Array(sab, byteOffset, length);
+	    case TAG_I32: return new Int32Array(sab, byteOffset, length);
+	    case TAG_U32: return new Uint32Array(sab, byteOffset, length);
+	    case TAG_F32: return new Float32Array(sab, byteOffset, length);
+	    case TAG_F64: return new Float64Array(sab, byteOffset, length);
 	    default: throw new Error("Bad array typetag: " + tag.toString(16));
 	    }
 	case ARG_BOOL:

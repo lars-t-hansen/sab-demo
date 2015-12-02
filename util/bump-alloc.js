@@ -7,8 +7,8 @@
 //   The allocator can be initialized on both master and workers and
 //   will be thread-safe.
 //
-// The allocator has accessors for SharedTypedArrays of every type,
-//   eg, m.Int32Array gets you the SharedInt32Array mapped onto the
+// The allocator has accessors for shared TypedArrays of every type,
+//   eg, m.Int32Array gets you the Int32Array mapped onto the
 //   memory.  These arrays all alias though they may overlap only with
 //   a subrange of the shared memory (overhead, alignment).
 //
@@ -21,7 +21,7 @@
 // The allocator has utility methods for allocating ranges of elements
 //   within the shared memory as shared typed arrays, eg,
 //   m.allocInt32Array(n) will bump-allocate memory for an n-element
-//   SharedInt32Array and return a new array object.  If the value
+//   shared Int32Array and return a new array object.  If the value
 //   returned is null then the allocation failed.
 //
 // There is no facility for freeing individual objects.
@@ -80,16 +80,16 @@ function SharedBumpAlloc(sab, byteOffset, bytesAvail, who) {
     var baseOffset = adjustedByteOffset + _SBA_METAWORDS*4;
     var adjustedBytesAvail = adjustedLimit - baseOffset;
 
-    this._meta = new SharedInt32Array(sab, adjustedByteOffset, _SBA_METAWORDS);
+    this._meta = new Int32Array(sab, adjustedByteOffset, _SBA_METAWORDS);
 
-    this._int8Array = new SharedInt8Array(sab, baseOffset, adjustedBytesAvail);
-    this._uint8Array = new SharedUint8Array(sab, baseOffset, adjustedBytesAvail);
-    this._int16Array = new SharedInt16Array(sab, baseOffset, adjustedBytesAvail >> 1);
-    this._uint16Array = new SharedUint16Array(sab, baseOffset, adjustedBytesAvail >> 1);
-    this._int32Array = new SharedInt32Array(sab, baseOffset, adjustedBytesAvail >> 2);
-    this._uint32Array = new SharedUint32Array(sab, baseOffset, adjustedBytesAvail >> 2);
-    this._float32Array = new SharedFloat32Array(sab, baseOffset, adjustedBytesAvail >> 2);
-    this._float64Array = new SharedFloat64Array(sab, baseOffset, adjustedBytesAvail >> 3);
+    this._int8Array = new Int8Array(sab, baseOffset, adjustedBytesAvail);
+    this._uint8Array = new Uint8Array(sab, baseOffset, adjustedBytesAvail);
+    this._int16Array = new Int16Array(sab, baseOffset, adjustedBytesAvail >> 1);
+    this._uint16Array = new Uint16Array(sab, baseOffset, adjustedBytesAvail >> 1);
+    this._int32Array = new Int32Array(sab, baseOffset, adjustedBytesAvail >> 2);
+    this._uint32Array = new Uint32Array(sab, baseOffset, adjustedBytesAvail >> 2);
+    this._float32Array = new Float32Array(sab, baseOffset, adjustedBytesAvail >> 2);
+    this._float64Array = new Float64Array(sab, baseOffset, adjustedBytesAvail >> 3);
 
     this._limit = adjustedLimit - baseOffset;	// Cache this, it doesn't change
     this._sab = sab;
@@ -203,7 +203,7 @@ SharedBumpAlloc.prototype.allocInt8Array =
 	var p = this.allocInt8(nelements);
 	if (!p)
 	    return null;
-	return new SharedInt8Array(this._sab, this._baseOffset + p, nelements);
+	return new Int8Array(this._sab, this._baseOffset + p, nelements);
     };
 
 SharedBumpAlloc.prototype.allocUint8Array =
@@ -211,7 +211,7 @@ SharedBumpAlloc.prototype.allocUint8Array =
 	var p = this.allocUint8(nelements);
 	if (!p)
 	    return null;
-	return new SharedUint8Array(this._sab, this._baseOffset + p, nelements);
+	return new Uint8Array(this._sab, this._baseOffset + p, nelements);
     };
 
 SharedBumpAlloc.prototype.allocInt16Array =
@@ -219,7 +219,7 @@ SharedBumpAlloc.prototype.allocInt16Array =
 	var p = this.allocInt16(nelements);
 	if (!p)
 	    return null;
-	return new SharedInt16Array(this._sab, this._baseOffset + (p << 1), nelements);
+	return new Int16Array(this._sab, this._baseOffset + (p << 1), nelements);
     };
 
 SharedBumpAlloc.prototype.allocUint16Array =
@@ -227,7 +227,7 @@ SharedBumpAlloc.prototype.allocUint16Array =
 	var p = this.allocUint16(nelements);
 	if (!p)
 	    return null;
-	return new SharedUint16Array(this._sab, this._baseOffset + (p << 1), nelements);
+	return new Uint16Array(this._sab, this._baseOffset + (p << 1), nelements);
     };
 
 SharedBumpAlloc.prototype.allocInt32Array =
@@ -235,7 +235,7 @@ SharedBumpAlloc.prototype.allocInt32Array =
 	var p = this.allocInt32(nelements);
 	if (!p)
 	    return null;
-	return new SharedInt32Array(this._sab, this._baseOffset + (p << 2), nelements);
+	return new Int32Array(this._sab, this._baseOffset + (p << 2), nelements);
     };
 
 SharedBumpAlloc.prototype.allocUint32Array =
@@ -243,7 +243,7 @@ SharedBumpAlloc.prototype.allocUint32Array =
 	var p = this.allocUint32(nelements);
 	if (!p)
 	    return null;
-	return new SharedUint32Array(this._sab, this.baseOffset + (p << 2), nelements);
+	return new Uint32Array(this._sab, this.baseOffset + (p << 2), nelements);
     };
 
 SharedBumpAlloc.prototype.allocFloat32Array =
@@ -251,7 +251,7 @@ SharedBumpAlloc.prototype.allocFloat32Array =
 	var p = this.allocFloat32(nelements);
 	if (!p)
 	    return null;
-	return new SharedFloat32Array(this._sab, this.baseOffset + (p << 2), nelements);
+	return new Float32Array(this._sab, this.baseOffset + (p << 2), nelements);
     };
 
 SharedBumpAlloc.prototype.allocFloat64Array =
@@ -259,7 +259,7 @@ SharedBumpAlloc.prototype.allocFloat64Array =
 	var p = this.allocFloat64(nelements);
 	if (!p)
 	    return null;
-	return new SharedFloat64Array(this._sab, this.baseOffset + (p << 3), nelements);
+	return new Float64Array(this._sab, this.baseOffset + (p << 3), nelements);
     };
 
 // Mark is a synchronization point.  The returned value is never 0.

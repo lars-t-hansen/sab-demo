@@ -105,7 +105,7 @@ var _Multicore_queue = [];
 
 function _Multicore_init(numWorkers, workerScript, readyCallback) {
     _Multicore_numWorkers = numWorkers;
-    _Multicore_mem = new SharedInt32Array(0x10000);
+    _Multicore_mem = new Int32Array(new SharedArrayBuffer(0x10000*Int32Array.BYTES_PER_ELEMENT));
     _Multicore_alloc = 0;
     _Multicore_barrierLoc = _Multicore_alloc;
     _Multicore_barrier = new MasterBarrier(0x1337,
@@ -479,25 +479,26 @@ function _Multicore_comm(doneCallback, fnIdent, outputMem, indexSpace, args) {
 	    }
 
 	    var tag = 0;
-	    if (v instanceof SharedInt8Array)
+	    if (v instanceof Int8Array)
 		tag = TAG_I8;
-	    else if (v instanceof SharedUint8Array)
+	    else if (v instanceof Uint8Array)
 		tag = TAG_U8;
-	    else if (v instanceof SharedUint8ClampedArray)
+	    else if (v instanceof Uint8ClampedArray)
 		tag = TAG_CU8;
-	    else if (v instanceof SharedInt16Array)
+	    else if (v instanceof Int16Array)
 		tag = TAG_I16;
-	    else if (v instanceof SharedUint16Array)
+	    else if (v instanceof Uint16Array)
 		tag = TAG_U16;
-	    else if (v instanceof SharedInt32Array)
+	    else if (v instanceof Int32Array)
 		tag = TAG_I32;
-	    else if (v instanceof SharedUint32Array)
+	    else if (v instanceof Uint32Array)
 		tag = TAG_U32;
-	    else if (v instanceof SharedFloat32Array)
+	    else if (v instanceof Float32Array)
 		tag = TAG_F32;
-	    else if (v instanceof SharedFloat64Array)
+	    else if (v instanceof Float64Array)
 		tag = TAG_F64;
-	    else
+
+	    if (tag == 0 || !(v.buffer instanceof SharedArrayBuffer))
 		throw new Error("Argument #" + vno + " must be Number or shared array: " + v);
 
 	    argValues.push(ARG_STA | (tag << 8));

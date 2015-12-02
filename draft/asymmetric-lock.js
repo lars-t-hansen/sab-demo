@@ -49,7 +49,7 @@
 
 // Create the Master side of the lock.
 //
-// iab is a SharedInt32Array.
+// iab is a shared Int32Array.
 // offset is the first index of a range of MasterLock.NUMLOCS
 //   consecutive addresses within iab.
 //

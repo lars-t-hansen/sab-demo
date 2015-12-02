@@ -20,9 +20,9 @@ function loadImage() {
 function convolveImage() {
     var h = image.height;
     var w = image.width;
-    input = new SharedUint8Array(h*w);
+    input = new Uint8Array(new SharedArrayBuffer(h*w));
     input.set(image.data);
-    output = new SharedUint8Array(h*w);
+    output = new Uint8Array(new SharedArrayBuffer(h*w));
     time_before = Date.now();
     Multicore.build(displayResult, "convolve", output, [[0,h], [0,w]], input, h, w);
 }

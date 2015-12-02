@@ -37,20 +37,20 @@ function SharedMalloc(sab, byteOffset, bytesAvail, who) {
     //
     // Free list is address ordered with eager coalescing (tricky in shared memory)
 
-    this._meta = new SharedInt32Array(sab, nByteOffset, METAWORDS);
+    this._meta = new Int32Array(sab, nByteOffset, METAWORDS);
 
     meta[WILDERNESS] = baseOffset + 8; // Make '0' an illegal address
     meta[LIMIT] = baseOffset + numBytes;
     meta[FREELIST] = 0;
 
-    this._int8Array = new SharedInt8Array(sab, baseOffset, numBytes);
-    this._uint8Array = new SharedUint8Array(sab, baseOffset, numBytes);
-    this._int16Array = new SharedInt16Array(sab, baseOffset, numBytes >> 1);
-    this._uint16Array = new SharedUint16Array(sab, baseOffset, numBytes >> 1);
-    this._int32Array = new SharedInt32Array(sab, baseOffset, numBytes >> 2);
-    this._uint32Array = new SharedUint32Array(sab, baseOffset, numBytes >> 2);
-    this._float32Array = new SharedFloat32Array(sab, baseOffset, numBytes >> 2);
-    this._float64Array = new SharedFloat64Array(sab, baseOffset, numBytes >> 3);
+    this._int8Array = new Int8Array(sab, baseOffset, numBytes);
+    this._uint8Array = new Uint8Array(sab, baseOffset, numBytes);
+    this._int16Array = new Int16Array(sab, baseOffset, numBytes >> 1);
+    this._uint16Array = new Uint16Array(sab, baseOffset, numBytes >> 1);
+    this._int32Array = new Int32Array(sab, baseOffset, numBytes >> 2);
+    this._uint32Array = new Uint32Array(sab, baseOffset, numBytes >> 2);
+    this._float32Array = new Float32Array(sab, baseOffset, numBytes >> 2);
+    this._float64Array = new Float64Array(sab, baseOffset, numBytes >> 3);
 }
 
 // The SharedMalloc will have accessors called the following:
