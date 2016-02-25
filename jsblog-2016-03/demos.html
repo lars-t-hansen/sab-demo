@@ -6,11 +6,16 @@
 <html>
 <head>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
-  <title> Shared memory in JavaScript: The demos </title>
+  <title> Shared memory in JavaScript: Variations on Mandelbrot </title>
 </head>
 
 <body>
-  <p> Mandel0 (main thread): <a href="mandel0.html">Try it!</a> </p>
+  <p> A succession of programs demonstraing how an animation of the Mandelbrot
+    set can be parallelized and then tuned.  The numbers following the demo
+    names indicate the number of workers that will be used. </p>
+
+  <p> Mandel0 (main thread): <a href="mandel0.html">1</a> </p>
+
   <p> Mandel1 (postMessage):
     <a href="mandel1.html?numWorkers=1"> 1 </a> &nbsp; 
     <a href="mandel1.html?numWorkers=2"> 2 </a> &nbsp; 
@@ -21,6 +26,7 @@
     <a href="mandel1.html?numWorkers=7"> 7 </a> &nbsp; 
     <a href="mandel1.html?numWorkers=8"> 8 </a> &nbsp; 
   </p>
+
   <p> Mandel2 (postMessage + overlap):
     <a href="mandel2.html?numWorkers=1"> 1 </a> &nbsp; 
     <a href="mandel2.html?numWorkers=2"> 2 </a> &nbsp; 
@@ -31,6 +37,7 @@
     <a href="mandel2.html?numWorkers=7"> 7 </a> &nbsp; 
     <a href="mandel2.html?numWorkers=8"> 8 </a> &nbsp; 
   </p>
+
   <p> Mandel3 (futexes + load balancing):
     <a href="mandel3.html?numWorkers=1"> 1 </a> &nbsp; 
     <a href="mandel3.html?numWorkers=2"> 2 </a> &nbsp; 
@@ -41,6 +48,7 @@
     <a href="mandel3.html?numWorkers=7"> 7 </a> &nbsp; 
     <a href="mandel3.html?numWorkers=8"> 8 </a> &nbsp; 
   </p>
+
   <p> Mandel4 (locks + barriers + load balancing): 
     <a href="mandel4.html?numWorkers=1"> 1 </a> &nbsp; 
     <a href="mandel4.html?numWorkers=2"> 2 </a> &nbsp; 
@@ -51,7 +59,8 @@
     <a href="mandel4.html?numWorkers=7"> 7 </a> &nbsp; 
     <a href="mandel4.html?numWorkers=8"> 8 </a> &nbsp; 
   </p>
-  <p> Mandel5 (prototype synchronics + load balancing, <a href="https://bugzil.la/1248670">requires a patch</a>):
+
+  <p> Mandel5 (prototype synchronics + load balancing, requires <a href="https://bugzil.la/1248670">a patch</a> and a custom build):
     <a href="mandel5.html?numWorkers=1"> 1 </a> &nbsp; 
     <a href="mandel5.html?numWorkers=2"> 2 </a> &nbsp; 
     <a href="mandel5.html?numWorkers=3"> 3 </a> &nbsp; 
@@ -61,6 +70,7 @@
     <a href="mandel5.html?numWorkers=7"> 7 </a> &nbsp; 
     <a href="mandel5.html?numWorkers=8"> 8 </a> &nbsp; 
   </p>
+
   <p> Mandel6 (futexes + load balancing + asm.js + SIMD, requires Firefox Nightly):
     <a href="mandel6.html?numWorkers=1"> 1 </a> &nbsp; 
     <a href="mandel6.html?numWorkers=2"> 2 </a> &nbsp; 
