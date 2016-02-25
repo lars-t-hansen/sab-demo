@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+     License, v. 2.0. If a copy of the MPL was not distributed with this
+     file, You can obtain one at http://mozilla.org/MPL/2.0/.  -->
+<!-- Simple animation of the Mandelbrot set, demonstrating basic work
+     distribution and use of the asymmetric barrier.  To select a
+     number N of workers, add "?workers=N" to the document URL.  -->
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <title> Shared-memory mandelbrot with 'synchronic' </title>
+</head>
+
+<body onload="setup()">
+  <div> <input type="button" id="startButton" value="Start"></input> </div>
+  <div id="theStats"> &nbsp; </div>
+  <div> <canvas id="theCanvas"></canvas> </div>
+
+  <script src="utilities.js"></script>
+  <script src="mandel5-shared.js"></script>
+  <script src="mandel5-master.js"></script>
+</body>
+</html>
