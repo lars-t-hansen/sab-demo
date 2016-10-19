@@ -3,6 +3,10 @@ sab-demo
 
 Abstractions and demos for SharedArrayBuffer, SharedTypedArray, and Atomics.
 
+These are somewhat dated.  See index.html for more.
+
+To run these, load https://lars-t-hansen.github.io/sab-demo/index.html and run them from there.
+
 In util/ are several useful abstractions:
 
 * asymmetric-barrier.js is a worker/main thread barrier synchronization that does not require the main thread to block
