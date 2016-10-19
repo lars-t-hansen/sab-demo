@@ -85,7 +85,7 @@ function initBarrier() {
 function releaseBarrier() {
     Atomics.store(sync, Sync_counter, numWorkers);
     Atomics.add(sync, Sync_seq, 1);
-    Atomics.futexWake(sync, Sync_seq, numWorkers);
+    Atomics.wake(sync, Sync_seq, numWorkers);
     Atomics.add(sync, Sync_seq, 1);
 }
 

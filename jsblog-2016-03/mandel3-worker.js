@@ -33,6 +33,6 @@ function runWorker(shmem, ID) {
 }
 
 function waitForWork(ID) {
-    Atomics.futexWait(sync, Sync_wait + ID, 0);
+    Atomics.wait(sync, Sync_wait + ID, 0);
     Atomics.store(sync, Sync_wait + ID, 0);
 }

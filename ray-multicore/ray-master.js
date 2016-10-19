@@ -28,7 +28,7 @@ function doSetup() {
 }
 
 function doRaytrace1() {
-    Multicore.broadcast(doRaytrace2, "setupParameters", 
+    Multicore.broadcast(doRaytrace2, "setupParameters",
 			height, width,
 			g_left, g_right, g_top, g_bottom,
 			shadows, reflection, reflection_depth,
@@ -50,7 +50,7 @@ function doDisplay() {
     var mycanvas = document.getElementById("mycanvas");
     var cx = mycanvas.getContext('2d');
     var id  = cx.createImageData(width, height);
-    id.data.set(new Uint8Array(new SharedArrayBuffer(pixels.buffer)));
+    id.data.set(new Uint8Array(pixels.buffer));
     cx.putImageData( id, 0, 0 );
     document.getElementById("mycaption").innerHTML = numWorkers + " workers, time=" + (end_time - start_time) + "ms";
 }

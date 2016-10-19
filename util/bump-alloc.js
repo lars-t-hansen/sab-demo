@@ -126,7 +126,7 @@ SharedBumpAlloc.NUMBYTES = _SBA_NUMBYTES;
 // The arrays returned from these all overlap completely (but the
 // length values will only be the same for same-basetype arrays, of
 // course).
-    
+
 Object.defineProperties(SharedBumpAlloc.prototype,
 			{ Int8Array: { get: function () { return this._int8Array; } },
 			  Uint8Array: { get: function () { return this._uint8Array; } },

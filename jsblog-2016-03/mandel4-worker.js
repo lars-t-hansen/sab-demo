@@ -42,7 +42,7 @@ function enterBarrier() {
     var seq = Atomics.load(sync, Sync_seq);
     if (Atomics.sub(sync, Sync_counter, 1) == 1)
 	postMessage(["workersDone"]);
-    Atomics.futexWait(sync, Sync_seq, seq);
+    Atomics.wait(sync, Sync_seq, seq);
     while (Atomics.load(sync, Sync_seq) & 1)
 	;
 }
@@ -54,7 +54,7 @@ function lock() {
     if ((c = Atomics.compareExchange(sync, Sync_lockState, 0, 1)) != 0) {
 	do {
             if (c == 2 || Atomics.compareExchange(sync, Sync_lockState, 1, 2) != 0)
-		Atomics.futexWait(sync, Sync_lockState, 2);
+		Atomics.wait(sync, Sync_lockState, 2);
 	} while ((c = Atomics.compareExchange(sync, Sync_lockState, 0, 2)) != 0);
     }
 }
@@ -63,6 +63,6 @@ function unlock() {
     var v0 = Atomics.sub(sync, Sync_lockState, 1);
     if (v0 != 1) {
 	Atomics.store(sync, Sync_lockState, 0);
-	Atomics.futexWake(sync, Sync_lockState, 1);
+	Atomics.wake(sync, Sync_lockState, 1);
     }
 }

@@ -12,6 +12,22 @@
 <body>
   <h1> Shared memory in JavaScript: Sundry demos </h1>
 
+  <p> These are some older demo programs coming out of the shared memory work.  Some of these are dated and ad-hoc and not all that interesting, but they should all work (last tested on 2016-10-19 in Firefox 50b7 on MacOS X 10.11).  The distinctions among some of the programs will be lost on you unless you study the source code and the programs' README.md files.  For most of these, you can vary the number of workers by adding the ?workers=n parameter in the URL; the default is 4. </p>
+
+  <p><b>More current demos and benchmarks are in the repo <a href="https://github.com/lars-t-hansen/parlib-simple">https://github.com/lars-t-hansen/parlib-simple</a>, in the demo/ directory.</b> </p>
+  
+  <h2> Mozilla hacks demos (originals) </h2>
+
   <p> <a href="jsblog-2016-03/demos.html">Demo programs for a blog post (March, 2016)</a> </p>
+
+  <h2> Misc demos </h2>
+
+  <p> <a href="convolve/convolve.html"> Convolution using primitive operations </a> </p>
+  <p> <a href="convolve-multicore/convolve.html"> Convolution using the Multicore framework </a> </p>
+  <p> <a href="kraken-gaussian/gaussian-blur-par.html"> The Gaussian blur benchmark from Kraken 1.1, using the Multicore framework </a> </p>
+  <p> <a href="ray-sequential/ray.html"> Ray tracer, sequential code </a> (takes 40s on my MacBook pro, program is not tuned) </p>
+  <p> <a href="ray-multicore/ray.html"> Ray tracer using the Multicore framework </a> (about 1.2s, program is significantly tuned) </p>
+  <p> <a href="renderWorld/renderWorld.html"> A Minecraft-like animation, from Intel </a> </p>
+
 </body>
 </html>

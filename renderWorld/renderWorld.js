@@ -25,6 +25,13 @@
  *
  */
 
+Array.buildPar = function (k, f) {
+    let a = new Array(k);
+    for ( let i=0 ; i < k ; i++ )
+	a[i] = f(i);
+    return a;
+}
+
 var wself;
 var World = function() {
     this.xRot = 0;
@@ -36,7 +43,7 @@ var World = function() {
     this.oy = 0;
     this.oz = 0;
     this.result = null;
-    this.MODE = "pjs";
+    this.MODE = "workers";
 
     this.w = 250 * 2;
     this.h =  128 * 2;
@@ -93,7 +100,7 @@ World.prototype.toggleExecutionMode = function () {
 	break;
     case "workers":
 	this.MODE = "seq";
-        document.getElementById("togglebutton").innerHTML = "Go Parallel";
+        document.getElementById("togglebutton").innerHTML = "Go PJS";
 	break;
     case "seq":
 	this.MODE = "pjs";
@@ -373,14 +380,19 @@ World.prototype.postClock = function (start_time, retrigger) {
     if (!HEADLESS)
 	this.ctx.putImageData(this.pixels, 0, 0);
     var frames = this.frames;
+    var modestr;
+    switch (this.MODE) {
+    case 'pjs': modestr="Parallel JS (obsolete, emulated)"; break;
+    case 'seq': modestr="Sequential"; break;
+    case 'workers': modestr="Multicore, " + numWorkers + " workers"; break;
+    }
     // warmup
-    var cs = this.MODE == "workers" ? (numWorkers + " ") : "";
     if(frames > 9) {
         this.time_elapsed += Date.now() - start_time;
-        document.getElementById("fps").innerHTML = cs + this.MODE + "  " + Math.floor((frames-9)*1000/this.time_elapsed) + " fps";
+        document.getElementById("fps").innerHTML = modestr + "  " + Math.floor((frames-9)*1000/this.time_elapsed) + " fps";
     }
     else {
-        document.getElementById("fps").innerHTML = cs + this.MODE + "  " + "-- fps";
+        document.getElementById("fps").innerHTML = modestr + "  " + "-- fps";
     }
     if (retrigger) {
 	CALLBACK_PENDING = true;

@@ -47,10 +47,10 @@ WorkerOnlyBarrier.prototype.enter =
 	    Atomics.add(this.iab, this.seqLoc, 1);
 	    // The correctness of the wakeup call depends on the
 	    // linear-queue behavior of wait and wake.
-	    Atomics.futexWake(this.iab, this.seqLoc, numWorkers-1);
+	    Atomics.wake(this.iab, this.seqLoc, numWorkers-1);
 	}
 	else {
 	    const seq = Atomics.load(this.iab, this.seqLoc);
-	    Atomics.futexWait(this.iab, this.seqLoc, seq, Number.POSITIVE_INFINITY);
+	    Atomics.wait(this.iab, this.seqLoc, seq, Number.POSITIVE_INFINITY);
 	}
     };

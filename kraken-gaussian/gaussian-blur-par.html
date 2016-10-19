@@ -75,7 +75,7 @@
       function buildKernel() {
         var ss = sigma * sigma;
         var factor = 2 * Math.PI * ss;
-        kernel = new SharedFloat64Array(kernelSize*kernelSize);
+        kernel = new Float64Array(new SharedArrayBuffer(kernelSize*kernelSize*8));
         for ( var i=0 ; i < kernelSize ; i++ ) {
             var g = Math.exp(-(i * i) / (2 * ss)) / factor;
             if (g < 1e-3) break;
@@ -112,8 +112,8 @@
           var len = data.length;
           var startTime = (new Date()).getTime();
 
-          var sharedDataIn = new SharedInt32Array(data.length);
-          var sharedDataOut = new SharedInt32Array(data.length);
+          var sharedDataIn = new Int32Array(new SharedArrayBuffer(data.length*4));
+          var sharedDataOut = new Int32Array(new SharedArrayBuffer(data.length*4));
           sharedDataIn.set(data);
           Multicore.build(function () {
             var finishTime = Date.now() - startTime;

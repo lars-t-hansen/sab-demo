@@ -62,7 +62,7 @@ function startFrame() {
 function signalWorkAvailable() {
     for ( var ID=0 ; ID < numWorkers ; ID++ ) {
         Atomics.store(sync, Sync_wait + ID, 1);
-        Atomics.futexWake(sync, Sync_wait + ID, 1);
+        Atomics.wake(sync, Sync_wait + ID, 1);
     }
 }
 

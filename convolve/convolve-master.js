@@ -47,7 +47,7 @@ function initWorkers() {
 	var w = new Worker("convolve-worker.js");
 	// Workers post messages of the form [tag, payload...] where tag
 	// is always a string.
-	w.onmessage = 
+	w.onmessage =
 	    function (ev) {
 		switch (ev.data[0]) {
 		case "done":
