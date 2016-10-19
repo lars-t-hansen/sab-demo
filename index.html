@@ -16,7 +16,9 @@
 
   <p><b>More current demos and benchmarks are in the repo <a href="https://github.com/lars-t-hansen/parlib-simple">https://github.com/lars-t-hansen/parlib-simple</a>, in the demo/ directory.</b> </p>
 
-  <p><b>NOTE ABOUT GOOGLE CHROME:</b> Google Chrome should be able to run these but will not allow programs loaded from file: URLs to create web workers.  You must therefore host them on a local web server.  See README-CHROME.md for more. </p>
+  <p><b>NOTE ABOUT FIREFOX:</b> In Firefox you must currently enable shared memory manually.  In a new tab, go to about:config.  Search for "shared_memory" among the preferences and set it to <b>true</b>.</p>
+  
+  <p><b>NOTE ABOUT GOOGLE CHROME:</b> In Google Chrome you must currently enable shared memory when you start the browser.  [TODO: add information here.]  Furthermore, Google Chrome will not allow programs loaded from file: URLs to create web workers.  You must therefore host these demos on a local web server.  See README-SERVER.md for more if you don't know how to do that. </p>
   
   <h2> Mozilla hacks demos (originals) </h2>
 
