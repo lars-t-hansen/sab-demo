@@ -20,7 +20,7 @@ function setupMain() {
     for ( var i=0 ; i < numWorkers ; i++ ) {
         var worker = new Worker("mandel1-worker.js");
         worker.onmessage = dispatchMessage;
-        worker.postMessage(["setupWorker", shmem], [shmem]);
+        worker.postMessage(["setupWorker", shmem]);
         workers.push(worker);
     }
 }

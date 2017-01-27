@@ -24,7 +24,7 @@ function setupMain() {
     for ( var ID=0 ; ID < numWorkers ; ID++ ) {
         workers[ID] = new Worker("mandel5-worker.js");
         workers[ID].onmessage = dispatchMessage;
-        workers[ID].postMessage(["runWorker", shmem, ID], [shmem]);
+        workers[ID].postMessage(["runWorker", shmem, ID]);
     }
 }
 

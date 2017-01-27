@@ -27,7 +27,7 @@ function setupMain() {
     for ( var i=0 ; i < numWorkers ; i++ ) {
         workers[i] = new Worker("mandel4-worker.js");
         workers[i].onmessage = dispatchMessage;
-        workers[i].postMessage(["runWorker", shmem], [shmem]);
+        workers[i].postMessage(["runWorker", shmem]);
     }
 }
 
